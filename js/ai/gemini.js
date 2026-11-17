@@ -1,6 +1,6 @@
 // Fournisseur Gemini (API Google AI Studio, appelée directement depuis le navigateur).
-import { SCHEMA_ANALYSE } from './schema.js';
-import { promptAnalyse, promptMarche } from './prompt.js';
+import { SCHEMA_ANALYSE, SCHEMA_GROUPEMENT } from './schema.js';
+import { promptAnalyse, promptMarche, promptGroupement } from './prompt.js';
 import { nettoyerCle } from '../settings.js';
 
 const BASE = 'https://generativelanguage.googleapis.com/v1beta';
@@ -124,4 +124,17 @@ export async function listerModeles(cle) {
   return (rep.models || [])
     .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
     .map(m => m.name.replace(/^models\//, ''));
+}
+
+export async function grouperPhotos({ cle, modele, images, onEtape }) {
+  const parts = [{ text: promptGroupement(images.length) }];
+  images.forEach((img, i) => {
+    parts.push({ text: `Photo ${i + 1} :` });
+    parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
+  });
+  const { rep } = await generer({ cle, modele, onEtape, corps: {
+    contents: [{ role: 'user', parts }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA_GROUPEMENT, temperature: 0.1 }
+  } });
+  return JSON.parse(texte(rep));
 }

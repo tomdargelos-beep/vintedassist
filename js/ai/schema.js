@@ -1,5 +1,6 @@
 // Schéma de sortie structurée imposé à l'IA (format « responseSchema » de l'API Gemini).
 import { COULEURS, CATEGORIES, ETATS, GENRES, CERTITUDES } from '../data/vinted.js';
+import { TYPES_PHOTO } from '../state.js';
 
 const S = (extra = {}) => ({ type: 'STRING', ...extra });
 const certitude = S({ enum: CERTITUDES });
@@ -58,3 +59,28 @@ export function enJsonSchema(s) {
   if (nullable) out = { anyOf: [out, { type: 'null' }] };
   return out;
 }
+
+export const SCHEMA_GROUPEMENT = {
+  type: 'OBJECT',
+  properties: {
+    groupes: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          description: { type: 'STRING' },
+          photos: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: { numero: { type: 'INTEGER' }, type: { type: 'STRING', enum: TYPES_PHOTO.map(t => t.id) } },
+              required: ['numero', 'type']
+            }
+          }
+        },
+        required: ['description', 'photos']
+      }
+    }
+  },
+  required: ['groupes']
+};

@@ -4,13 +4,17 @@ import { ecranPhotos } from './screens/photos.js';
 import { ecranAnalyse } from './screens/analyse.js';
 import { ecranReglages } from './screens/reglages.js';
 import { ecranHistorique } from './screens/historique.js';
+import { ecranRetouche } from './screens/retouche.js';
+import { ecranLot } from './screens/lot.js';
 
-export const VERSION_APP = '0.4.1';
+export const VERSION_APP = '0.5.0';
 
 const ROUTES = {
   '': { titre: 'Vinted Assist', ecran: ecranAccueil, retour: null },
   photos: { titre: 'Photos', ecran: ecranPhotos, retour: '' },
-  analyse: { titre: 'Analyse', ecran: ecranAnalyse, retour: 'photos' },
+  analyse: { titre: 'Annonce', ecran: ecranAnalyse, retour: '' },
+  retouche: { titre: 'Retouche', ecran: ecranRetouche, retour: 'analyse' },
+  lot: { titre: 'Plusieurs annonces', ecran: ecranLot, retour: '' },
   reglages: { titre: 'Réglages', ecran: ecranReglages, retour: '' },
   historique: { titre: 'Historique', ecran: ecranHistorique, retour: '' }
 };

@@ -95,6 +95,7 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 - Bouton « Tout copier » pour titre + description.
 
 ## Retouche des photos
+- **Choix retenu (17/11/2026)** : `@imgly/background-removal` **1.4.5** + données 1.4.5 (paire cohérente publiée sur npm), modèle « small », **hébergés dans le dépôt** (`js/vendor/bg-removal-1.4.5.mjs`, `assets/detourage/`, ~62 Mo) pour ne dépendre d'aucun CDN ; le service worker les met en cache (cache d'abord). Licence AGPL-3.0, compatible avec un dépôt public à usage perso. Fond choisi d'après la luminance de la 1re photo détourée (seuil d'écart 70/255). Sortie 1200×1600 (3:4 portrait, ratio Vinted encore à vérifier).
 - **Détourage dans le navigateur, gratuit** : utilise la bibliothèque `@imgly/background-removal` (ou une alternative gratuite équivalente côté navigateur ; justifie ton choix). Pas d'IA générative pour retoucher le vêtement : **le vêtement doit rester strictement identique** (couleurs, défauts compris), seul le fond change.
 - Prévois un indicateur de chargement : le modèle de détourage se télécharge au premier usage et peut être lent sur téléphone. Mets-le en cache.
 - **Fonds disponibles** :
@@ -109,6 +110,11 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 - Option de réglages simples : recadrage, luminosité, rotation.
 - Les photos d'étiquettes et de défauts : **pas de détourage** par défaut (juste recadrage/luminosité), car elles doivent rester des photos réelles.
 - Export : JPEG de bonne qualité, ≈1600 px sur le plus grand côté, format portrait. Vérifie le format recommandé par Vinted. Bouton « Enregistrer toutes les photos » dans l'ordre de l'annonce : sur iPhone via le partage natif (enregistrement dans Photos), sinon téléchargement classique.
+
+## Mode « plusieurs annonces d'un coup » (lot)
+- J'importe toutes les photos de plusieurs articles ; l'IA les regroupe par article et donne le type de chaque photo (un appel, photos réduites à 512 px).
+- Je valide ou corrige les groupes (déplacer une photo, changer un type, renommer), puis l'appli crée chaque annonce, range les photos dans l'ordre (face, dos, …, étiquettes, défauts), lance l'analyse puis le détourage, l'une après l'autre.
+- Plusieurs annonces peuvent être en cours en même temps (liste sur l'accueil, stockées dans IndexedDB).
 
 ## Parcours utilisateur (écrans)
 1. **Accueil** : bouton « Nouvelle annonce ».

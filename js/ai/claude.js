@@ -1,7 +1,7 @@
 // Fournisseur Claude (API Anthropic), appelée directement depuis le navigateur via le SDK officiel.
 import Anthropic from '../vendor/anthropic-sdk-1.4.0.mjs';
-import { SCHEMA_ANALYSE, enJsonSchema } from './schema.js';
-import { promptAnalyse, promptMarche } from './prompt.js';
+import { SCHEMA_ANALYSE, SCHEMA_GROUPEMENT, enJsonSchema } from './schema.js';
+import { promptAnalyse, promptMarche, promptGroupement } from './prompt.js';
 import { nettoyerCle } from '../settings.js';
 
 export const MODELE = 'claude-opus-5-5';
@@ -102,4 +102,24 @@ export async function listerModeles(cle) {
   } catch (e) {
     throw traduire(e);
   }
+}
+
+export async function grouperPhotos({ cle, images }) {
+  const content = [{ type: 'text', text: promptGroupement(images.length) }];
+  images.forEach((img, i) => {
+    content.push({ type: 'text', text: `Photo ${i + 1} :` });
+    content.push({ type: 'image', source: { type: 'base64', media_type: img.mimeType, data: img.base64 } });
+  });
+  let rep;
+  try {
+    rep = await client(cle).beta.messages.create({
+      model: MODELE, max_tokens: 16000, ...REPLI,
+      output_config: { effort: 'medium', format: { type: 'json_schema', schema: enJsonSchema(SCHEMA_GROUPEMENT) } },
+      messages: [{ role: 'user', content }]
+    });
+  } catch (e) {
+    throw traduire(e);
+  }
+  verifierFin(rep);
+  return JSON.parse(texte(rep));
 }

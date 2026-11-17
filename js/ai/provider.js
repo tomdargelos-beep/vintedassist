@@ -87,6 +87,32 @@ export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
   return analyse;
 }
 
+// Regroupe les photos d'un lot par article. Renvoie [{ description, photos: [{ index, type }] }],
+// avec chaque photo exactement une fois (les oubliées vont dans un groupe « À classer »).
+export async function grouperPhotos(photos, reglages, onEtape = () => {}) {
+  onEtape('Préparation des photos…');
+  const images = [];
+  for (const p of photos) {
+    const petit = await redimensionner(p.blob, 512, 0.8);
+    images.push({ mimeType: 'image/jpeg', base64: await blobEnBase64(petit) });
+  }
+  onEtape(`Regroupement de ${photos.length} photos par article…`);
+  const { res } = await avecSecours(reglages, onEtape, (f, base) => f.grouperPhotos({ ...base, images, onEtape }));
+  const vues = new Set();
+  const groupes = [];
+  for (const g of res.groupes || []) {
+    const ph = [];
+    for (const x of g.photos || []) {
+      const i = x.numero - 1;
+      if (i >= 0 && i < photos.length && !vues.has(i)) { vues.add(i); ph.push({ index: i, type: x.type }); }
+    }
+    if (ph.length) groupes.push({ description: g.description || 'Article', photos: ph });
+  }
+  const oubliees = photos.map((_, i) => i).filter(i => !vues.has(i));
+  if (oubliees.length) groupes.push({ description: 'À classer', photos: oubliees.map(i => ({ index: i, type: 'detail' })) });
+  return groupes;
+}
+
 export async function listerModeles(nom, cle) {
   return FOURNISSEURS[nom].listerModeles(cle);
 }

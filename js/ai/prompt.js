@@ -43,3 +43,12 @@ N'utilise pas Vinted comme source. Réponds UNIQUEMENT avec un objet JSON, sans 
 {"prix_vise": nombre en euros, "certitude": "tres_elevee|elevee|moyenne|faible", "references_marche": [{"description": "article comparable", "prix": nombre, "source": "nom du site"}], "justification": "une phrase"}
 Donne 2 à 4 références réelles trouvées. Si tu n'en trouves pas, references_marche vide et certitude faible. Le prix visé est ce qu'un particulier peut réellement encaisser pour cette pièce dans cet état.`;
 }
+
+export function promptGroupement(n) {
+  return `Voici ${n} photos numérotées de 1 à ${n}, prises par un vendeur pour créer plusieurs annonces Vinted (une annonce par article).
+Regroupe les photos par article : chaque photo appartient à exactement un article, et chaque numéro de 1 à ${n} doit apparaître une seule fois.
+Rattache les gros plans (étiquettes, défauts, détails) au bon article grâce aux indices : couleur, matière, motif, arrière-plan, et ordre de prise de vue (les photos d'un même article sont en général consécutives).
+Pour chaque photo, donne son type parmi : face, dos, profil (chaussures), semelle, etiquette_marque, etiquette_taille (taille ou composition), defaut, detail.
+description : type d'article + marque si elle est lisible + couleur, en quelques mots (ex. "T-shirt Carhartt noir"). Ne devine pas une marque illisible.
+Garde les articles dans l'ordre où ils apparaissent dans les photos.`;
+}

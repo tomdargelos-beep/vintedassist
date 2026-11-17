@@ -33,3 +33,4 @@ async function tx(store, mode, fn) {
 export const dbGet = (store, key) => tx(store, 'readonly', s => s.get(key));
 export const dbPut = (store, value, key) => tx(store, 'readwrite', s => s.put(value, key));
 export const dbDelete = (store, key) => tx(store, 'readwrite', s => s.delete(key));
+export const dbGetAll = store => tx(store, 'readonly', s => s.getAll());

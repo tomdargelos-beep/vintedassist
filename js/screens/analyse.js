@@ -216,7 +216,8 @@ function relecture(app, annonce, reglages) {
     blocPrix,
     h('div', { class: 'card' }, h('label', {}, 'Mots-clés'), h('p', {}, (a.mots_cles || []).join(', '))),
     h('p', { class: 'muted' }, `Couleurs autorisées : ${COULEURS.join(', ')}.`),
-    h('button', { class: 'btn', disabled: true }, 'Retouche des photos (étape 4)'),
+    h('button', { class: 'btn btn-primary', onclick: () => aller('retouche') }, 'Retouche et enregistrement des photos'),
+    h('button', { class: 'btn', onclick: () => aller('photos') }, 'Modifier les photos'),
     a.modele_utilise ? h('p', { class: 'muted', style: 'text-align:center' }, `Analysé avec ${a.modele_utilise}`) : null,
     h('button', {
       class: 'btn btn-danger', onclick: async () => {
