@@ -2,6 +2,7 @@
 // composition avec ombre douce, rotation, luminosité, export JPEG.
 // Le vêtement n'est jamais modifié : seul le fond change (le détourage ne fait que découper).
 import { TYPES_SANS_DETOURAGE } from './state.js';
+import { repasser, modelesImage } from './ai/gemini.js';
 
 export const FONDS = {
   blanc: { nom: 'Blanc', couleur: '#ffffff', L: 255 },
@@ -119,6 +120,52 @@ function cadre(c) {
   }
   return x1 < 0 ? { x: 0, y: 0, l: c.width, h: c.height } : { x: x0, y: y0, l: x1 - x0 + 2, h: y1 - y0 + 2 };
 }
+
+const NOMS_FOND = { blanc: 'blanc', 'gris-clair': 'gris clair', anthracite: 'gris anthracite', noir: 'noir' };
+
+function blobEnBase64(blob) {
+  return new Promise((ok, ko) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1]);
+    r.onerror = () => ko(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+// Version « repassée » par l'IA (édition d'image Gemini), à partir de la photo détourée sur le fond choisi.
+export async function versionRepassee(p, fond, reglages) {
+  if (!reglages.apiKey) throw new Error('Il faut une clé Gemini (Réglages) pour la version repassée.');
+  let modele = reglages.modeleImage;
+  if (!modele) {
+    modele = (await modelesImage(reglages.apiKey))[0];
+    if (!modele) throw new Error('Aucun modèle d\'édition d\'image disponible avec ta clé Gemini.');
+  }
+  const entree = await rendre({ ...p, rotation: p.rotation, luminosite: p.luminosite }, fond, 0.9);
+  const brut = await repasser({ cle: reglages.apiKey, modele, base64: await blobEnBase64(entree), couleurFond: NOMS_FOND[fond] || 'blanc' });
+  // Mise au format de l'annonce (portrait 1200×1600) sur le même fond.
+  const bmp = await createImageBitmap(brut);
+  const c = canvas(SORTIE.largeur, SORTIE.hauteur);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = FONDS[fond]?.couleur || '#ffffff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  const e = Math.min(c.width / bmp.width, c.height / bmp.height);
+  ctx.drawImage(bmp, (c.width - bmp.width * e) / 2, (c.height - bmp.height * e) / 2, bmp.width * e, bmp.height * e);
+  const blob = await new Promise((ok, ko) => c.toBlob(b => (b ? ok(b) : ko(new Error('Export impossible'))), 'image/jpeg', 0.9));
+  return { blob, modele };
+}
+
+// Photos à mettre dans l'annonce, dans l'ordre : version IA (si choisie) puis photo réelle (si choisie).
+export function photosAnnonce(annonce, rendus) {
+  const out = [];
+  for (const p of annonce.photos) {
+    const choix = p.repasse ? (p.versionIA || 'les-deux') : 'reelle';
+    if (p.repasse && choix !== 'reelle') out.push(p.repasse);
+    if (choix !== 'ia' && rendus.get(p.id)) out.push(rendus.get(p.id));
+  }
+  return out;
+}
+
+export const utiliseIA = annonce => annonce.photos.some(p => p.repasse && (p.versionIA || 'les-deux') !== 'reelle');
 
 // Produit la photo finale (JPEG) d'une photo de l'annonce.
 export async function rendre(p, fond, qualite = 0.9) {

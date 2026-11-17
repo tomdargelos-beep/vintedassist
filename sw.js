@@ -1,6 +1,6 @@
 // Service worker : met l'appli en cache pour qu'elle s'ouvre vite et hors connexion.
 // Stratégie « réseau d'abord » : en ligne tu as toujours la dernière version, hors ligne le cache prend le relais.
-const CACHE = 'va-v0.5.0';
+const CACHE = 'va-v0.6.0';
 const CACHE_DONNEES = 'va-donnees-1'; // conservé d'une version à l'autre
 const COQUILLE = [
   './', './index.html', './manifest.webmanifest', './css/style.css',

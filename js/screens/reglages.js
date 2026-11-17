@@ -61,16 +61,24 @@ export async function ecranReglages(app) {
   });
 
   const modele = h('input', { type: 'text', value: r.modele, autocapitalize: 'off', spellcheck: false });
+  const modeleImage = h('input', { type: 'text', value: r.modeleImage, autocapitalize: 'off', spellcheck: false, placeholder: 'automatique' });
+  const mentionIA = h('textarea', { rows: 5 });
+  mentionIA.value = r.mentionIA;
   const gemini = blocCle({
     titre: 'Clé API Gemini (secours gratuit)', valeur: r.apiKey, fournisseur: 'gemini',
     aide: ['Optionnelle. Gratuite sur ', h('a', { href: 'https://aistudio.google.com/apikey', target: '_blank', rel: 'noopener' }, 'Google AI Studio'),
       '. Utilisée si Claude est indisponible.'],
-    extra: [h('label', {}, 'Modèle Gemini'), modele],
+    extra: [h('label', {}, 'Modèle Gemini (analyse)'), modele,
+      h('label', {}, 'Modèle Gemini (photos repassées par l\'IA)'), modeleImage,
+      h('p', { class: 'muted' }, 'Laisse vide pour la détection automatique. L\'édition d\'image peut demander une facturation activée sur ta clé Google.')],
     onValide: (cle, modeles, res) => {
       ecrireReglages({ apiKey: cle });
       const noms = modeles.filter(n => /flash/.test(n));
+      const images = modeles.filter(n => /image/.test(n) && /^gemini/.test(n));
       res.replaceChildren(h('p', {}, 'Clé valide et enregistrée. Modèles Flash disponibles (touche pour choisir) :'),
-        ...noms.map(n => h('button', { class: 'mini', style: 'margin:3px', onclick: () => { modele.value = n; } }, n)));
+        ...noms.map(n => h('button', { class: 'mini', style: 'margin:3px', onclick: () => { modele.value = n; } }, n)),
+        h('p', {}, images.length ? 'Modèles d\'image disponibles (touche pour choisir) :' : 'Aucun modèle d\'image disponible avec cette clé.'),
+        ...images.map(n => h('button', { class: 'mini', style: 'margin:3px', onclick: () => { modeleImage.value = n; } }, n)));
     }
   });
 
@@ -84,6 +92,8 @@ export async function ecranReglages(app) {
       cleClaude: nettoyerCle(claude.input.value),
       apiKey: nettoyerCle(gemini.input.value),
       modele: modele.value.trim() || 'gemini-flash-latest',
+      modeleImage: modeleImage.value.trim(),
+      mentionIA: mentionIA.value.trim(),
       margePct: Number(marge.value) || 0,
       plancherPct: Number(plancher.value) || 0,
       fondDefaut: fond.value
@@ -104,6 +114,8 @@ export async function ecranReglages(app) {
       h('p', { class: 'muted' }, 'Prix plancher = prix visé moins cet écart. En dessous, tu refuses les offres.')
     ),
     h('div', { class: 'card' }, h('label', {}, 'Fond par défaut'), fond),
+    h('div', { class: 'card' }, h('label', {}, 'Mention si une photo est retouchée par l\'IA'), mentionIA,
+      h('p', { class: 'muted' }, 'Ajoutée automatiquement à la description. Elle doit rester exacte : la photo IA est défroissée, pas seulement détourée.')),
     h('button', { class: 'btn btn-primary', onclick: enregistrer }, 'Enregistrer'),
     h('p', { class: 'muted', style: 'text-align:center' }, `Version ${VERSION_APP}`)
   );

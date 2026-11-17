@@ -3,6 +3,7 @@ import { chargerAnnonce, sauverAnnonce } from '../state.js';
 import { lireReglages } from '../settings.js';
 import { analyserAnnonce } from '../ai/provider.js';
 import { calculerPrix } from '../prix.js';
+import { utiliseIA } from '../retouche.js';
 import { CATEGORIES, COULEURS, ETATS, GENRES } from '../data/vinted.js';
 import { aller, VERSION_APP } from '../app.js';
 import { ordreFournisseurs, NOMS } from '../ai/provider.js';
@@ -136,11 +137,17 @@ function relecture(app, annonce, reglages) {
   const desc = h('textarea', { rows: 10 });
   const descFinale = () => {
     const d = (a.description || '').trim();
-    if (!s.mesures.trim()) return d;
     const lignes = d.split('\n');
-    const ligneMesures = `Mesures : ${s.mesures.trim()}`;
-    if (lignes.length > 1) lignes.splice(lignes.length - 1, 0, ligneMesures);
-    else lignes.push(ligneMesures);
+    if (s.mesures.trim()) {
+      const ligneMesures = `Mesures : ${s.mesures.trim()}`;
+      if (lignes.length > 1) lignes.splice(lignes.length - 1, 0, ligneMesures);
+      else lignes.push(ligneMesures);
+    }
+    // Mention obligatoire dès qu'une photo retouchée par l'IA est utilisée.
+    if (utiliseIA(annonce) && reglages.mentionIA?.trim()) {
+      if (lignes.length > 1) lignes.splice(lignes.length - 1, 0, '', reglages.mentionIA.trim());
+      else lignes.push('', reglages.mentionIA.trim());
+    }
     return lignes.join('\n');
   };
   desc.value = a.description || '';
@@ -203,6 +210,7 @@ function relecture(app, annonce, reglages) {
     h('div', { class: 'card' },
       h('label', {}, 'Description'), desc,
       h('label', {}, 'Mesures (ajoutées à la description)'), mesures,
+      utiliseIA(annonce) ? h('p', { class: 'muted' }, 'Photo retouchée par l\'IA utilisée : la mention des Réglages est ajoutée à la description copiée.') : null,
       h('button', { class: 'btn', onclick: () => copier(descFinale()) }, 'Copier la description')),
     h('button', { class: 'btn btn-primary', onclick: () => copier(`${titre.value}\n\n${descFinale()}`) }, 'Tout copier (titre + description)'),
     champ('Catégorie Vinted', 'categorie_vinted', CATEGORIES),

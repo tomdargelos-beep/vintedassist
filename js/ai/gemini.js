@@ -138,3 +138,43 @@ export async function grouperPhotos({ cle, modele, images, onEtape }) {
   } });
   return JSON.parse(texte(rep));
 }
+
+// ---- Édition d'image : « repassage » du vêtement (modèle image de Gemini) ----
+
+// Modèles capables de produire des images (ex. « …-flash-image… »), du plus récent au plus ancien.
+export async function modelesImage(cle) {
+  const noms = await listerModeles(cle);
+  const version = n => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0);
+  return noms.filter(n => /image/.test(n) && /^gemini/.test(n) && !/imagen|tts|live|embed/.test(n))
+    .sort((a, b) => version(b) - version(a) || a.length - b.length);
+}
+
+export function promptRepassage(couleurFond) {
+  return `Retouche cette photo d'un vêtement d'occasion pour une annonce de vente.
+À FAIRE : défroisser le vêtement comme s'il venait d'être repassé, le poser bien à plat, droit, symétrique et centré, vu de face du dessus, sur un fond uni ${couleurFond}, avec une ombre douce sous le vêtement. Rendu photo réaliste.
+À GARDER STRICTEMENT IDENTIQUE : le vêtement lui-même (même modèle, même coupe, mêmes proportions, même longueur de manches), les couleurs exactes, le logo, l'imprimé et tout texte à l'identique (même police, même position, même taille), les étiquettes visibles, les coutures, et SURTOUT tous les défauts : taches, décolorations, bouloches, trous, fils tirés. Ne retire aucun défaut, n'ajoute aucun élément, ne change pas la matière.`;
+}
+
+export async function repasser({ cle, modele, base64, couleurFond }) {
+  const corps = ratio => ({
+    contents: [{ role: 'user', parts: [{ text: promptRepassage(couleurFond) }, { inlineData: { mimeType: 'image/jpeg', data: base64 } }] }],
+    generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(ratio ? { imageConfig: { aspectRatio: '3:4' } } : {}) }
+  });
+  let rep, derniere;
+  for (let essai = 0; essai < 3 && !rep; essai++) {
+    try {
+      rep = await appel(cle, `models/${modele}:generateContent`, corps(essai === 0));
+    } catch (e) {
+      derniere = e;
+      if (!e.status && !/400/.test(e.message)) throw e; // 400 : on réessaie sans le format 3:4
+      if (e.status) await attendre(4000);
+    }
+  }
+  if (!rep) throw derniere;
+  const part = (rep.candidates?.[0]?.content?.parts || []).find(p => p.inlineData?.data);
+  if (!part) throw new Error('Le modèle n\'a pas renvoyé d\'image (' + (rep.candidates?.[0]?.finishReason || 'raison inconnue') + ').');
+  const bin = atob(part.inlineData.data);
+  const octets = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) octets[i] = bin.charCodeAt(i);
+  return new Blob([octets], { type: part.inlineData.mimeType || 'image/png' });
+}

@@ -170,3 +170,4 @@ textarea {
 .vignette img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; background: var(--bg); }
 .vignette span { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; padding: 1px 6px; border-radius: 6px; }
 .vignette select { padding: 6px; font-size: 13px; }
+.bloc-ia { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 8px; }

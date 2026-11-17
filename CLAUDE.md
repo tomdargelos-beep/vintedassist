@@ -96,7 +96,7 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 
 ## Retouche des photos
 - **Choix retenu (17/11/2026)** : `@imgly/background-removal` **1.4.5** + données 1.4.5 (paire cohérente publiée sur npm), modèle « small », **hébergés dans le dépôt** (`js/vendor/bg-removal-1.4.5.mjs`, `assets/detourage/`, ~62 Mo) pour ne dépendre d'aucun CDN ; le service worker les met en cache (cache d'abord). Licence AGPL-3.0, compatible avec un dépôt public à usage perso. Fond choisi d'après la luminance de la 1re photo détourée (seuil d'écart 70/255). Sortie 1200×1600 (3:4 portrait, ratio Vinted encore à vérifier).
-- **Détourage dans le navigateur, gratuit** : utilise la bibliothèque `@imgly/background-removal` (ou une alternative gratuite équivalente côté navigateur ; justifie ton choix). Pas d'IA générative pour retoucher le vêtement : **le vêtement doit rester strictement identique** (couleurs, défauts compris), seul le fond change.
+- **Détourage dans le navigateur, gratuit** : utilise la bibliothèque `@imgly/background-removal` (ou une alternative gratuite équivalente côté navigateur ; justifie ton choix). Le détourage ne modifie pas le vêtement (couleurs, défauts compris), seul le fond change ; la seule exception est la version « repassée » par l'IA décrite plus bas, toujours optionnelle et signalée.
 - Prévois un indicateur de chargement : le modèle de détourage se télécharge au premier usage et peut être lent sur téléphone. Mets-le en cache.
 - **Fonds disponibles** :
   - Unis : blanc, gris clair, gris anthracite, noir.
@@ -106,6 +106,7 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
   - vêtement clair → fond foncé ou gris ; vêtement foncé → fond blanc ou gris clair ;
   - ne jamais proposer un fond trop proche du vêtement (seuil d'écart de luminance à définir et à ajuster) ;
   - le fond proposé est présélectionné, mais je peux changer.
+- **Version « repassée » par l'IA (décision de Tom, 17/11/2026)** : bouton optionnel sur les photos détourées (face, dos, profil) qui envoie la photo au modèle d'édition d'image de Gemini (détection automatique d'un modèle `…image…`, réglable) pour défroisser, redresser et centrer le vêtement, avec consigne de garder à l'identique couleurs, logo, texte, étiquettes, proportions **et défauts**. Jamais sur étiquettes, défauts, détails, semelles. Par défaut : version IA en couverture **et** photo réelle juste après (choix par photo : les deux / IA seule / réelle seule). Dès qu'une photo IA est utilisée, une **mention exacte** (réglable, « retouchée numériquement : fond et défroissage ») est ajoutée à la description. Ne jamais écrire que la photo n'a reçu « qu'un fond blanc » si elle a été défroissée par l'IA.
 - Ajouter une **ombre portée douce** sous le vêtement pour éviter l'effet « collage », surtout sur le parquet.
 - Option de réglages simples : recadrage, luminosité, rotation.
 - Les photos d'étiquettes et de défauts : **pas de détourage** par défaut (juste recadrage/luminosité), car elles doivent rester des photos réelles.

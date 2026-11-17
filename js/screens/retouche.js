@@ -1,7 +1,7 @@
 import { h, toast } from '../ui.js';
 import { chargerAnnonce, sauverAnnonce, TYPES_PHOTO, TYPES_SANS_DETOURAGE } from '../state.js';
 import { lireReglages } from '../settings.js';
-import { FONDS, doitDetourer, preparerPhotos, rendre, enregistrer } from '../retouche.js';
+import { FONDS, doitDetourer, preparerPhotos, rendre, enregistrer, versionRepassee, photosAnnonce } from '../retouche.js';
 import { aller } from '../app.js';
 
 export async function ecranRetouche(app) {
@@ -18,7 +18,7 @@ export async function ecranRetouche(app) {
   const liste = h('ul', { class: 'photos' });
   const rendus = new Map(); // id de photo → JPEG final (prêt pour le partage)
   const btnEnregistrer = h('button', { class: 'btn btn-primary', disabled: true, onclick: async () => {
-    const blobs = annonce.photos.map(p => rendus.get(p.id)).filter(Boolean);
+    const blobs = photosAnnonce(annonce, rendus);
     const res = await enregistrer(blobs, annonce.analyse?.titre || 'annonce');
     if (res === 'telechargement') toast(`${blobs.length} photo(s) téléchargée(s)`);
   } }, 'Enregistrer toutes les photos');
@@ -31,6 +31,51 @@ export async function ecranRetouche(app) {
     h('div', { class: 'sticky-bottom' }, btnEnregistrer),
     h('button', { class: 'btn', onclick: () => aller('analyse') }, 'Retour aux textes de l\'annonce')
   );
+
+  function majBouton() {
+    const n = photosAnnonce(annonce, rendus).length;
+    btnEnregistrer.disabled = !n;
+    btnEnregistrer.textContent = `Enregistrer les ${n} photos`;
+  }
+
+  // Version « repassée » par l'IA : génération, aperçu, et choix de ce qui va dans l'annonce.
+  function blocIA(p) {
+    const zone = h('div', { class: 'bloc-ia' });
+    const etat = h('p', { class: 'muted' });
+    const dessiner = () => {
+      zone.replaceChildren();
+      if (p.repasse) {
+        const url = URL.createObjectURL(p.repasse);
+        const choix = h('select', { onchange: async e => { p.versionIA = e.target.value; await sauverAnnonce(); majBouton(); } },
+          [['les-deux', 'Les deux (IA en premier)'], ['ia', 'Version IA seule'], ['reelle', 'Photo réelle seule']]
+            .map(([v, l]) => h('option', { value: v, selected: (p.versionIA || 'les-deux') === v }, l)));
+        zone.append(
+          h('label', {}, 'Version repassée par l\'IA'),
+          h('img', { class: 'apercu', src: url, alt: 'Version IA' }),
+          p.repasseFond !== annonce.fond ? h('p', { class: 'alerte-texte' }, 'Faite sur un autre fond : refais-la pour qu\'elle corresponde.') : null,
+          h('p', { class: 'muted' }, 'Compare avec la photo réelle : logo, couleurs, taches. Si un détail a changé, ne l\'utilise pas.'),
+          h('label', {}, 'Dans l\'annonce'), choix);
+      }
+      zone.append(h('button', { class: 'btn', onclick: generer }, p.repasse ? 'Refaire la version IA' : 'Repasser avec l\'IA'), etat);
+    };
+    async function generer() {
+      etat.textContent = 'Génération en cours (10 à 40 secondes)…';
+      try {
+        const { blob } = await versionRepassee(p, annonce.fond, lireReglages());
+        p.repasse = blob;
+        p.repasseFond = annonce.fond;
+        p.versionIA = p.versionIA || 'les-deux';
+        await sauverAnnonce();
+        dessiner();
+        majBouton();
+      } catch (e) {
+        console.error(e);
+        etat.textContent = 'Échec : ' + e.message;
+      }
+    }
+    dessiner();
+    return zone;
+  }
 
   function majFonds() {
     choixFond.replaceChildren(...Object.entries(FONDS).map(([cle, f]) =>
@@ -80,9 +125,9 @@ export async function ecranRetouche(app) {
         )
       ));
       await rendrePhoto(p, img);
+      if (doitDetourer(p)) liste.lastChild.append(blocIA(p));
     }
-    btnEnregistrer.disabled = false;
-    btnEnregistrer.textContent = `Enregistrer les ${annonce.photos.length} photos`;
+    majBouton();
   }
 
   try {

@@ -6,6 +6,8 @@ export const DEFAUTS = {
   cleClaude: '',
   apiKey: '',              // clé Gemini (secours)
   modele: 'gemini-flash-latest', // alias officiel qui suit le dernier modèle Flash
+  modeleImage: '',         // modèle Gemini d'édition d'image (vide = détection automatique)
+  mentionIA: 'Photo de couverture retouchée numériquement (fond et défroissage) pour mettre l\'article en valeur. Les photos suivantes montrent l\'article réel, sans retouche. N\'hésitez pas à me demander des photos supplémentaires ou de détail.',
   margePct: 15,      // prix affiché = prix visé + marge
   plancherPct: 10,   // prix plancher = prix visé - écart
   fondDefaut: 'auto' // auto | blanc | gris-clair | anthracite | noir
