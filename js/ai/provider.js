@@ -26,20 +26,24 @@ export function ordreFournisseurs(r) {
 }
 
 // Essaie chaque fournisseur ; ne bascule que sur une erreur temporaire (surcharge, réseau, quota).
+// En cas d'échec final, le message liste chaque IA essayée et sa raison.
 async function avecSecours(r, onEtape, fn) {
   const ordre = ordreFournisseurs(r);
-  if (!ordre.length) throw new Error('Aucune clé API enregistrée. Ajoute-la dans les Réglages.');
-  let derniere;
+  if (!ordre.length) throw new Error('Aucune clé API enregistrée. Ajoute ta clé Claude dans les Réglages.');
+  const echecs = [];
   for (const [i, nom] of ordre.entries()) {
     try {
       return { nom, res: await fn(FOURNISSEURS[nom], { cle: cleDe(nom, r), modele: r.modele }) };
     } catch (e) {
-      derniere = e;
-      if (e.status === undefined || i === ordre.length - 1) throw e;
+      echecs.push(`${NOMS[nom]} : ${e.message}`);
+      const fin = e.status === undefined || i === ordre.length - 1;
+      if (fin) {
+        const manque = !r.cleClaude ? ' (Aucune clé Claude enregistrée : seule l\'IA gratuite a été utilisée.)' : '';
+        throw new Error(echecs.join(' — Puis ') + manque);
+      }
       onEtape(`${NOMS[nom]} indisponible, bascule sur ${NOMS[ordre[i + 1]]}…`);
     }
   }
-  throw derniere;
 }
 
 export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {

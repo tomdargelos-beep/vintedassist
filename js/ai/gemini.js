@@ -28,7 +28,7 @@ async function appel(cle, chemin, corps) {
       e.status = rep.status;
       throw e;
     }
-    if (rep.status === 429) throw new Error('Quota gratuit atteint pour le moment. Réessaie dans une minute (ou demain si c\'est le quota du jour).');
+    if (rep.status === 429) throw Object.assign(new Error('quota gratuit atteint (réessaie dans une minute, ou demain si c\'est le quota du jour).'), { status: 429 });
     throw new Error(`Erreur Gemini ${rep.status} : ${msg}`);
   }
   return json;

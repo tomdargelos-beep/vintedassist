@@ -4,7 +4,8 @@ import { lireReglages } from '../settings.js';
 import { analyserAnnonce } from '../ai/provider.js';
 import { calculerPrix } from '../prix.js';
 import { CATEGORIES, COULEURS, ETATS, GENRES } from '../data/vinted.js';
-import { aller } from '../app.js';
+import { aller, VERSION_APP } from '../app.js';
+import { ordreFournisseurs, NOMS } from '../ai/provider.js';
 
 const LIBELLES = {
   tres_elevee: 'Certitude très élevée',
@@ -61,6 +62,7 @@ async function lancer(app, annonce, reglages) {
     console.error(e);
     app.replaceChildren(
       h('div', { class: 'card alerte' }, h('strong', {}, 'L\'analyse a échoué. '), e.message),
+      h('p', { class: 'muted' }, `IA configurées : ${ordreFournisseurs(reglages).map(n => NOMS[n]).join(', puis ') || 'aucune'} · version ${VERSION_APP}`),
       h('button', { class: 'btn btn-primary', onclick: async () => { app.replaceChildren(); await ecranAnalyse(app); } }, 'Réessayer'),
       h('button', { class: 'btn', onclick: () => aller('reglages') }, 'Réglages')
     );
