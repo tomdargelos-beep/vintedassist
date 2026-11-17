@@ -142,7 +142,15 @@ export async function versionRepassee(p, fond, reglages) {
     if (!modele) throw new Error('Aucun modèle d\'édition d\'image disponible avec ta clé Gemini.');
   }
   const entree = await rendre({ ...p, rotation: p.rotation, luminosite: p.luminosite }, fond, 0.9);
-  const brut = await repasser({ cle: reglages.apiKey, modele, base64: await blobEnBase64(entree), couleurFond: NOMS_FOND[fond] || 'blanc' });
+  let brut;
+  try {
+    brut = await repasser({ cle: reglages.apiKey, modele, base64: await blobEnBase64(entree), couleurFond: NOMS_FOND[fond] || 'blanc' });
+  } catch (e) {
+    if (e.status === 429) {
+      throw new Error(`quota Google atteint pour ${modele}. L'édition d'image n'est probablement pas incluse dans l'offre gratuite : active la facturation sur ta clé dans Google AI Studio, puis réessaie.`);
+    }
+    throw e;
+  }
   // Mise au format de l'annonce (portrait 1200×1600) sur le même fond.
   const bmp = await createImageBitmap(brut);
   const c = canvas(SORTIE.largeur, SORTIE.hauteur);
