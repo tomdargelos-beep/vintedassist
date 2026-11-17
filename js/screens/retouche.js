@@ -26,7 +26,7 @@ export async function ecranRetouche(app) {
   app.append(
     barre,
     h('div', { class: 'card' }, h('label', {}, 'Fond'), choixFond,
-      h('button', { class: 'btn', onclick: async e => {
+      !lireReglages().iaImage ? null : h('button', { class: 'btn', onclick: async e => {
         e.target.disabled = true;
         const etatIA = e.target.nextSibling;
         const echecs = await repasserTout(annonce, lireReglages(), { onEtape: t => { etatIA.textContent = t; }, sauver: () => sauverAnnonce(annonce) });
@@ -34,7 +34,7 @@ export async function ecranRetouche(app) {
         e.target.disabled = false;
         await toutRendre();
       } }, 'Repasser toutes les photos avec l\'IA'),
-      h('p', { class: 'muted' }),
+      lireReglages().iaImage ? h('p', { class: 'muted' }) : null,
       h('p', { class: 'muted' }, 'Le fond proposé contraste avec le vêtement. Étiquettes, défauts, détails et semelles restent des photos réelles.')),
     liste,
     h('div', { class: 'sticky-bottom' }, btnEnregistrer),
@@ -44,7 +44,7 @@ export async function ecranRetouche(app) {
   function majBouton() {
     const n = photosAnnonce(annonce, rendus).length;
     btnEnregistrer.disabled = !n;
-    btnEnregistrer.textContent = `Enregistrer les ${n} photos`;
+    btnEnregistrer.textContent = n > 1 ? `Enregistrer les ${n} photos` : 'Enregistrer la photo';
   }
 
   // Version « repassée » par l'IA : génération, aperçu, et choix de ce qui va dans l'annonce.
@@ -134,7 +134,7 @@ export async function ecranRetouche(app) {
         )
       ));
       await rendrePhoto(p, img);
-      if (doitDetourer(p)) liste.lastChild.append(blocIA(p));
+      if (doitDetourer(p) && lireReglages().iaImage) liste.lastChild.append(blocIA(p));
     }
     majBouton();
   }
@@ -146,7 +146,7 @@ export async function ecranRetouche(app) {
       fondDefaut: lireReglages().fondDefaut
     });
     const reglages = lireReglages();
-    if (reglages.repassageAuto && reglages.apiKey) {
+    if (reglages.iaImage && reglages.repassageAuto && reglages.apiKey) {
       const echecs = await repasserTout(annonce, reglages, { onEtape: t => { etat.textContent = t; }, sauver: () => sauverAnnonce(annonce) });
       if (echecs.length) toast('Repassage IA impossible pour ' + echecs.length + ' photo(s)', 4000);
     }

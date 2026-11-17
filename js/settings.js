@@ -11,7 +11,9 @@ export const DEFAUTS = {
   margePct: 15,      // prix affiché = prix visé + marge
   plancherPct: 10,   // prix plancher = prix visé - écart
   fondDefaut: 'auto', // auto | studio | blanc | gris-clair | anthracite | noir
-  repassageAuto: false // version IA générée automatiquement (face, dos, profil)
+  iaImage: false,       // repassage par IA (Gemini image, payant) : désactivé par choix de Tom
+  repassageAuto: false, // version IA générée automatiquement (si iaImage)
+  redressementAuto: true // remet le vêtement d'aplomb (rotation seule, gratuit)
 };
 
 export function lireReglages() {

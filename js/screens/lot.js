@@ -147,7 +147,7 @@ async function traiter(app) {
       await sauverAnnonce(a);
       await preparerPhotos(a, { onEtape: t => { l.etat.textContent = t; }, sauver: () => sauverAnnonce(a), fondDefaut: reglages.fondDefaut });
       let note = '';
-      if (reglages.repassageAuto && reglages.apiKey) {
+      if (reglages.iaImage && reglages.repassageAuto && reglages.apiKey) {
         const echecs = await repasserTout(a, reglages, { onEtape: t => { l.etat.textContent = t; }, sauver: () => sauverAnnonce(a) });
         if (echecs.length) note = ` (repassage IA impossible pour ${echecs.length} photo(s))`;
       }

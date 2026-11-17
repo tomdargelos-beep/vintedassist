@@ -87,6 +87,8 @@ export async function ecranReglages(app) {
   const plancher = h('input', { type: 'number', inputMode: 'numeric', min: 0, max: 100, value: r.plancherPct });
   const fond = h('select', {}, FONDS.map(([v, l]) => h('option', { value: v, selected: v === r.fondDefaut }, l)));
   const repassageAuto = h('input', { type: 'checkbox', checked: !!r.repassageAuto });
+  const iaImage = h('input', { type: 'checkbox', checked: !!r.iaImage });
+  const redressementAuto = h('input', { type: 'checkbox', checked: r.redressementAuto !== false });
 
   function enregistrer() {
     ecrireReglages({
@@ -99,7 +101,9 @@ export async function ecranReglages(app) {
       margePct: Number(marge.value) || 0,
       plancherPct: Number(plancher.value) || 0,
       fondDefaut: fond.value,
-      repassageAuto: repassageAuto.checked
+      repassageAuto: repassageAuto.checked,
+      iaImage: iaImage.checked,
+      redressementAuto: redressementAuto.checked
     });
     toast('Réglages enregistrés');
   }
@@ -117,8 +121,11 @@ export async function ecranReglages(app) {
       h('p', { class: 'muted' }, 'Prix plancher = prix visé moins cet écart. En dessous, tu refuses les offres.')
     ),
     h('div', { class: 'card' }, h('label', {}, 'Fond par défaut'), fond,
-      h('label', { class: 'case' }, repassageAuto, ' Repasser automatiquement avec l\'IA (face, dos, profil)'),
-      h('p', { class: 'muted' }, 'Fait la version IA dès la retouche et en mode « plusieurs annonces ». Plus lent, et payant si ta clé Gemini est facturée.')),
+      h('label', { class: 'case' }, redressementAuto, ' Redresser automatiquement le vêtement'),
+      h('p', { class: 'muted' }, 'Remet le vêtement d\'aplomb (simple rotation, gratuit, le vêtement n\'est pas modifié).'),
+      h('label', { class: 'case' }, iaImage, ' Repassage par l\'IA (payant chez Google)'),
+      h('label', { class: 'case' }, repassageAuto, ' … automatiquement à chaque annonce'),
+      h('p', { class: 'muted' }, 'Désactivé : l\'édition d\'image de Google demande une facturation activée sur ta clé.')),
     h('div', { class: 'card' }, h('label', {}, 'Mention si une photo est retouchée par l\'IA'), mentionIA,
       h('p', { class: 'muted' }, 'Ajoutée automatiquement à la description. Elle doit rester exacte : la photo IA est défroissée, pas seulement détourée.')),
     h('button', { class: 'btn btn-primary', onclick: enregistrer }, 'Enregistrer'),
