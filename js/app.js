@@ -7,7 +7,7 @@ import { ecranHistorique } from './screens/historique.js';
 import { ecranRetouche } from './screens/retouche.js';
 import { ecranLot } from './screens/lot.js';
 
-export const VERSION_APP = '0.6.0';
+export const VERSION_APP = '0.7.0';
 
 const ROUTES = {
   '': { titre: 'Vinted Assist', ecran: ecranAccueil, retour: null },

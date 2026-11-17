@@ -29,8 +29,16 @@ Règles :
 - L'état choisi doit être cohérent avec les défauts trouvés.
 - couleurs : 1 ou 2 couleurs maximum, choisies dans la liste autorisée.
 - prix.prix_vise : prix réaliste en euros qu'un vendeur peut encaisser sur Vinted pour cette pièce d'occasion (marque, type, état). C'est une estimation provisoire ; références de marché vides ici.
-- titre : 60 caractères maximum, format : Type + Marque + détail clé + Taille. Pas d'emoji.
-- description : en français, ton simple et honnête, sans emoji ni superlatif mensonger. Structure : une phrase d'accroche ; marque ; taille (et conseil de coupe si visible) ; couleur ; matière ; état avec les défauts mentionnés clairement ; puis une dernière ligne de mots-clés.
+- titre : 60 caractères maximum, format exact : Type + Marque (avec la ligne précise si lisible, ex. "Carhartt WIP") + couleur précise + "taille" + Taille. Exemple : "T-shirt Carhartt WIP marron rouille taille M". Pas d'emoji.
+- description : en français, ton simple, naturel et honnête, sans emoji. Format exact, sur le modèle de l'exemple ci-dessous :
+  1) UN seul paragraphe de 4 à 6 phrases courtes : type + marque + couleur précise + taille ; le logo, l'imprimé ou le détail principal et son emplacement ; une qualité concrète et vérifiable sur les photos (imprimé net, col propre, coton épais…) sans inventer ; l'état, en citant clairement chaque défaut s'il y en a ; un usage ou un style (streetwear, casual…).
+  2) une ligne vide.
+  3) une ligne de 4 à 6 hashtags en minuscules, sans accent ni espace : #marque, #marque+ligne si elle existe, #type, #style, #taille.
+  Exemple :
+  "T-shirt Carhartt WIP de couleur marron rouille, taille M. Logo imprimé noir sur la poitrine. Imprimé net et col propre, beau coton épais de qualité. En très bon état général. Idéal pour un look streetwear.
+
+#carhartt #carharttwip #tshirt #streetwear #m"
+  S'il y a des défauts, la phrase d'état les cite précisément (ex. "Très bon état, petite tache discrète sur le bas du dos, voir photo 4.") : ne jamais les cacher.
 - mots_cles : 5 à 10 mots-clés utiles pour la recherche.
 - Toutes les justifications : une phrase courte qui cite la photo (ex. "lu sur l'étiquette, photo 3").`;
 }

@@ -10,7 +10,8 @@ export const DEFAUTS = {
   mentionIA: 'Photo de couverture retouchée numériquement (fond et défroissage) pour mettre l\'article en valeur. Les photos suivantes montrent l\'article réel, sans retouche. N\'hésitez pas à me demander des photos supplémentaires ou de détail.',
   margePct: 15,      // prix affiché = prix visé + marge
   plancherPct: 10,   // prix plancher = prix visé - écart
-  fondDefaut: 'auto' // auto | blanc | gris-clair | anthracite | noir
+  fondDefaut: 'auto', // auto | studio | blanc | gris-clair | anthracite | noir
+  repassageAuto: false // version IA générée automatiquement (face, dos, profil)
 };
 
 export function lireReglages() {

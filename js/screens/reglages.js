@@ -5,6 +5,7 @@ import { listerModeles } from '../ai/provider.js';
 
 const FONDS = [
   ['auto', 'Automatique (selon le contraste)'],
+  ['studio', 'Studio (blanc cassé)'],
   ['blanc', 'Blanc'],
   ['gris-clair', 'Gris clair'],
   ['anthracite', 'Gris anthracite'],
@@ -85,6 +86,7 @@ export async function ecranReglages(app) {
   const marge = h('input', { type: 'number', inputMode: 'numeric', min: 0, max: 100, value: r.margePct });
   const plancher = h('input', { type: 'number', inputMode: 'numeric', min: 0, max: 100, value: r.plancherPct });
   const fond = h('select', {}, FONDS.map(([v, l]) => h('option', { value: v, selected: v === r.fondDefaut }, l)));
+  const repassageAuto = h('input', { type: 'checkbox', checked: !!r.repassageAuto });
 
   function enregistrer() {
     ecrireReglages({
@@ -96,7 +98,8 @@ export async function ecranReglages(app) {
       mentionIA: mentionIA.value.trim(),
       margePct: Number(marge.value) || 0,
       plancherPct: Number(plancher.value) || 0,
-      fondDefaut: fond.value
+      fondDefaut: fond.value,
+      repassageAuto: repassageAuto.checked
     });
     toast('Réglages enregistrés');
   }
@@ -113,7 +116,9 @@ export async function ecranReglages(app) {
       h('label', {}, 'Écart du prix plancher (%)'), plancher,
       h('p', { class: 'muted' }, 'Prix plancher = prix visé moins cet écart. En dessous, tu refuses les offres.')
     ),
-    h('div', { class: 'card' }, h('label', {}, 'Fond par défaut'), fond),
+    h('div', { class: 'card' }, h('label', {}, 'Fond par défaut'), fond,
+      h('label', { class: 'case' }, repassageAuto, ' Repasser automatiquement avec l\'IA (face, dos, profil)'),
+      h('p', { class: 'muted' }, 'Fait la version IA dès la retouche et en mode « plusieurs annonces ». Plus lent, et payant si ta clé Gemini est facturée.')),
     h('div', { class: 'card' }, h('label', {}, 'Mention si une photo est retouchée par l\'IA'), mentionIA,
       h('p', { class: 'muted' }, 'Ajoutée automatiquement à la description. Elle doit rester exacte : la photo IA est défroissée, pas seulement détourée.')),
     h('button', { class: 'btn btn-primary', onclick: enregistrer }, 'Enregistrer'),

@@ -5,6 +5,7 @@ import { TYPES_SANS_DETOURAGE } from './state.js';
 import { repasser, modelesImage } from './ai/gemini.js';
 
 export const FONDS = {
+  studio: { nom: 'Studio', couleur: '#f1f1f0', L: 241 },
   blanc: { nom: 'Blanc', couleur: '#ffffff', L: 255 },
   'gris-clair': { nom: 'Gris clair', couleur: '#d9d9d9', L: 217 },
   anthracite: { nom: 'Anthracite', couleur: '#3a3a3c', L: 58 },
@@ -48,7 +49,7 @@ export async function luminance(pngDetoure) {
 
 // Vêtement foncé → fond clair ; clair → fond foncé ; jamais un fond trop proche.
 export function choisirFond(L) {
-  const preferences = L < 100 ? ['blanc', 'gris-clair'] : L > 170 ? ['anthracite', 'noir'] : ['blanc', 'anthracite'];
+  const preferences = L < 100 ? ['studio', 'blanc'] : L > 170 ? ['anthracite', 'noir'] : ['studio', 'anthracite'];
   const ok = preferences.find(f => Math.abs(FONDS[f].L - L) >= SEUIL_CONTRASTE);
   if (ok) return ok;
   return Object.keys(FONDS).sort((a, b) => Math.abs(FONDS[b].L - L) - Math.abs(FONDS[a].L - L))[0];
@@ -121,7 +122,7 @@ function cadre(c) {
   return x1 < 0 ? { x: 0, y: 0, l: c.width, h: c.height } : { x: x0, y: y0, l: x1 - x0 + 2, h: y1 - y0 + 2 };
 }
 
-const NOMS_FOND = { blanc: 'blanc', 'gris-clair': 'gris clair', anthracite: 'gris anthracite', noir: 'noir' };
+const NOMS_FOND = { studio: 'blanc cassé très légèrement grisé (style studio photo)', blanc: 'blanc', 'gris-clair': 'gris clair', anthracite: 'gris anthracite', noir: 'noir' };
 
 function blobEnBase64(blob) {
   return new Promise((ok, ko) => {
@@ -218,4 +219,23 @@ export async function enregistrer(blobs, nomBase = 'annonce') {
     await new Promise(r => setTimeout(r, 300));
   }
   return 'telechargement';
+}
+
+// Repasse avec l'IA toutes les photos détourées qui n'ont pas encore de version IA (ou faite sur un autre fond).
+// Ne s'arrête pas sur une erreur : renvoie la liste des échecs.
+export async function repasserTout(annonce, reglages, { onEtape = () => {}, sauver = async () => {} } = {}) {
+  const aFaire = annonce.photos.filter(p => doitDetourer(p) && p.detoure && (!p.repasse || p.repasseFond !== annonce.fond));
+  const echecs = [];
+  for (const [i, p] of aFaire.entries()) {
+    onEtape(`Repassage par l'IA de la photo ${annonce.photos.indexOf(p) + 1} (${i + 1}/${aFaire.length})…`);
+    try {
+      p.repasse = (await versionRepassee(p, annonce.fond, reglages)).blob;
+      p.repasseFond = annonce.fond;
+      p.versionIA = p.versionIA || 'les-deux';
+      await sauver();
+    } catch (e) {
+      echecs.push(`photo ${annonce.photos.indexOf(p) + 1} : ${e.message}`);
+    }
+  }
+  return echecs;
 }

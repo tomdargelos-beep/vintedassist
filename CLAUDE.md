@@ -85,6 +85,7 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 ### Règles à mettre dans le prompt de l'IA
 - **Ne jamais inventer** une marque ou une taille : si l'étiquette n'est pas lisible → `valeur: null`, certitude `faible`. Pour la taille, indiquer le système lu (EU, US, UK) ; pour les chaussures, donner la pointure EU si elle figure sur l'étiquette.
 - Pour l'usure, être **prudent et exhaustif** : bouloches, taches, décoloration, fils tirés, coutures, trous, élasticité, col/poignets. Mieux vaut signaler un doute que l'oublier. L'état choisi doit être cohérent avec les défauts trouvés.
+- **Format de référence (choisi par Tom le 17/11/2026)** : titre « Type Marque(+ligne) couleur taille X » (ex. « T-shirt Carhartt WIP marron rouille taille M ») ; description = un paragraphe de 4 à 6 phrases courtes (type/marque/couleur/taille, logo ou détail, qualité vérifiable, état avec défauts cités, style), ligne vide, puis 4 à 6 hashtags (#marque #marqueligne #type #style #taille). Photos visées : rendu packshot (à plat, défroissé, symétrique, fond « Studio » blanc cassé #f1f1f0, ombre douce), obtenu à partir des photos de l'article réel, jamais avec des photos de la marque.
 - La description est en **français**, ton simple et honnête. Structure : une phrase d'accroche, puis marque, taille (et conseil de coupe si visible), couleur, matière, état avec les défauts **mentionnés clairement**, puis une ligne de mots-clés. Pas d'emojis. Pas de superlatifs mensongers.
 
 ### Interface de relecture

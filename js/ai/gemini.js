@@ -150,9 +150,9 @@ export async function modelesImage(cle) {
 }
 
 export function promptRepassage(couleurFond) {
-  return `Retouche cette photo d'un vêtement d'occasion pour une annonce de vente.
-À FAIRE : défroisser le vêtement comme s'il venait d'être repassé, le poser bien à plat, droit, symétrique et centré, vu de face du dessus, sur un fond uni ${couleurFond}, avec une ombre douce sous le vêtement. Rendu photo réaliste.
-À GARDER STRICTEMENT IDENTIQUE : le vêtement lui-même (même modèle, même coupe, mêmes proportions, même longueur de manches), les couleurs exactes, le logo, l'imprimé et tout texte à l'identique (même police, même position, même taille), les étiquettes visibles, les coutures, et SURTOUT tous les défauts : taches, décolorations, bouloches, trous, fils tirés. Ne retire aucun défaut, n'ajoute aucun élément, ne change pas la matière.`;
+  return `Transforme cette photo d'un vêtement d'occasion en photo produit de type packshot e-commerce, à partir de CE vêtement précis.
+À FAIRE : vêtement parfaitement défroissé comme repassé, posé bien à plat, vu de face exactement du dessus, droit, symétrique, manches écartées naturellement, centré et occupant environ 80 % de la hauteur de l'image, sur un fond uni ${couleurFond}, avec une ombre très douce et diffuse sous le vêtement, éclairage studio doux et homogène, rendu photo réaliste et net.
+À GARDER STRICTEMENT IDENTIQUE : le vêtement lui-même (même modèle, même coupe, mêmes proportions, même longueur de manches et de corps), les couleurs exactes (ne pas les embellir ni les saturer), le logo, l'imprimé et tout texte à l'identique (même police, même position, même taille), l'étiquette du col si elle est visible, les coutures, et SURTOUT tous les défauts : taches, décolorations, bouloches, trous, fils tirés. Ne retire aucun défaut, n'ajoute aucun élément, ne change pas la matière.`;
 }
 
 export async function repasser({ cle, modele, base64, couleurFond }) {

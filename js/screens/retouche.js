@@ -1,7 +1,7 @@
 import { h, toast } from '../ui.js';
 import { chargerAnnonce, sauverAnnonce, TYPES_PHOTO, TYPES_SANS_DETOURAGE } from '../state.js';
 import { lireReglages } from '../settings.js';
-import { FONDS, doitDetourer, preparerPhotos, rendre, enregistrer, versionRepassee, photosAnnonce } from '../retouche.js';
+import { FONDS, doitDetourer, preparerPhotos, rendre, enregistrer, versionRepassee, photosAnnonce, repasserTout } from '../retouche.js';
 import { aller } from '../app.js';
 
 export async function ecranRetouche(app) {
@@ -26,6 +26,15 @@ export async function ecranRetouche(app) {
   app.append(
     barre,
     h('div', { class: 'card' }, h('label', {}, 'Fond'), choixFond,
+      h('button', { class: 'btn', onclick: async e => {
+        e.target.disabled = true;
+        const etatIA = e.target.nextSibling;
+        const echecs = await repasserTout(annonce, lireReglages(), { onEtape: t => { etatIA.textContent = t; }, sauver: () => sauverAnnonce(annonce) });
+        etatIA.textContent = echecs.length ? 'Échecs : ' + echecs.join(' ; ') : '';
+        e.target.disabled = false;
+        await toutRendre();
+      } }, 'Repasser toutes les photos avec l\'IA'),
+      h('p', { class: 'muted' }),
       h('p', { class: 'muted' }, 'Le fond proposé contraste avec le vêtement. Étiquettes, défauts, détails et semelles restent des photos réelles.')),
     liste,
     h('div', { class: 'sticky-bottom' }, btnEnregistrer),
@@ -136,6 +145,11 @@ export async function ecranRetouche(app) {
       sauver: () => sauverAnnonce(annonce),
       fondDefaut: lireReglages().fondDefaut
     });
+    const reglages = lireReglages();
+    if (reglages.repassageAuto && reglages.apiKey) {
+      const echecs = await repasserTout(annonce, reglages, { onEtape: t => { etat.textContent = t; }, sauver: () => sauverAnnonce(annonce) });
+      if (echecs.length) toast('Repassage IA impossible pour ' + echecs.length + ' photo(s)', 4000);
+    }
     barre.remove();
     majFonds();
     await toutRendre();

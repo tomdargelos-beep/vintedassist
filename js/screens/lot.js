@@ -6,7 +6,7 @@ import { dbGet, dbPut, dbDelete } from '../db.js';
 import { redimensionner } from '../images.js';
 import { lireReglages } from '../settings.js';
 import { grouperPhotos, analyserAnnonce } from '../ai/provider.js';
-import { preparerPhotos } from '../retouche.js';
+import { preparerPhotos, repasserTout } from '../retouche.js';
 import { aller } from '../app.js';
 
 const CLE = '__lot';
@@ -146,7 +146,12 @@ async function traiter(app) {
       a.saisie = { mesures: '', prixAchat: '' };
       await sauverAnnonce(a);
       await preparerPhotos(a, { onEtape: t => { l.etat.textContent = t; }, sauver: () => sauverAnnonce(a), fondDefaut: reglages.fondDefaut });
-      l.etat.textContent = `Prête : ${a.analyse.titre}`;
+      let note = '';
+      if (reglages.repassageAuto && reglages.apiKey) {
+        const echecs = await repasserTout(a, reglages, { onEtape: t => { l.etat.textContent = t; }, sauver: () => sauverAnnonce(a) });
+        if (echecs.length) note = ` (repassage IA impossible pour ${echecs.length} photo(s))`;
+      }
+      l.etat.textContent = `Prête : ${a.analyse.titre}${note}`;
       ok++;
     } catch (e) {
       console.error(e);
