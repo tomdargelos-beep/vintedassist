@@ -3,7 +3,9 @@
 ## Contexte
 Je m'appelle Tom, étudiant, je vends sur Vinted mes propres vêtements et des pièces achetées pour revente.
 Objectif : réduire au maximum le temps passé à créer une annonce. L'appli ne sert qu'à moi.
-Je débute en code : **explique-moi ce que tu fais et pourquoi, étape par étape**, définis les termes techniques la première fois, et avance par petites étapes testables.
+Je ne cherche **pas** à apprendre le code : Claude écrit tout. Explications courtes, centrées sur **ce que je dois faire et comment tester sur mon iPhone**. Avancer par étapes testables.
+
+Ce que je vends : surtout de l'**homme**, principalement des **hauts** (t-shirts, sweats, pulls, chemises, polos, vestes) et des **chaussures** (baskets surtout).
 
 ## Ce que fait l'appli (vue d'ensemble)
 1. Je prends en photo un vêtement avec mon téléphone (plusieurs photos : face, dos, étiquette de marque, étiquette de taille/composition, gros plans des défauts éventuels).
@@ -14,14 +16,14 @@ Je débute en code : **explique-moi ce que tu fais et pourquoi, étape par étap
 **Pas de publication automatique sur Vinted** : pas de bot ni d'accès non officiel à Vinted. Je copie-colle moi-même.
 
 ## Contraintes techniques
-- Je travaille sur **Chromebook** et je prends les photos sur **téléphone**.
+- Je travaille sur **Chromebook** et je prends les photos sur **iPhone (Safari)**. Tout doit marcher sur iOS : installation via Safari > Partager > « Sur l'écran d'accueil », import photos via `<input type="file">` (pas d'attribut `capture` sur l'import multiple), export via le partage natif (`navigator.share` avec fichiers → « Enregistrer les images » dans Photos) car le téléchargement de plusieurs fichiers est mauvais sur iOS.
 - Format : **appli web progressive (PWA)** = un site web installable comme une appli sur le téléphone, qui marche aussi sur le Chromebook.
-- Code **100 % front-end** (HTML, CSS, JavaScript), sans serveur à payer. Framework léger accepté (par ex. Vite + JavaScript simple) si tu justifies le choix.
-- Hébergement gratuit : **GitHub Pages** (HTTPS obligatoire pour la PWA et l'accès à l'appareil photo).
+- Code **100 % front-end** (HTML, CSS, JavaScript), sans serveur à payer. **Choix retenu : JavaScript en modules ES natifs, sans étape de build** (pas de Vite, pas de Node requis). Les bibliothèques externes sont chargées depuis un CDN avec une version figée.
+- Hébergement gratuit : **GitHub Pages** (HTTPS obligatoire pour la PWA et l'accès à l'appareil photo). Le dépôt est **public** (condition de la gratuité de Pages). Tous les chemins sont **relatifs** (le site est servi sous `/vintedassist/`).
 - Budget quasi nul : uniquement des outils gratuits, à part éventuellement quelques centimes d'API.
 
 ## Analyse IA des photos
-- Fournisseur par défaut : **API Google Gemini** (offre gratuite, modèle « Flash » multimodal). Vérifie dans la doc officielle le nom du modèle actuel au lieu d'en coder un de mémoire.
+- Fournisseur par défaut : **API Google Gemini** (offre gratuite, modèle « Flash » multimodal). Note : mon abonnement Gemini Pro (appli grand public) ne donne **pas** d'accès à l'API ; la clé API se crée séparément et gratuitement sur Google AI Studio. Vérifie dans la doc officielle le nom du modèle actuel au lieu d'en coder un de mémoire.
 - Prévois une **couche d'abstraction** (un module `aiProvider`) pour pouvoir passer plus tard à l'API Claude sans tout réécrire.
 - **Clé API** : je la saisis dans un écran « Réglages » ; elle est stockée uniquement dans le `localStorage` de l'appareil. Elle ne doit **jamais** apparaître dans le code ni dans le dépôt GitHub. Ajoute un `.gitignore` adapté.
 - Réduis les images avant l'envoi (≈1024 px sur le plus grand côté) pour limiter le coût et le temps.
@@ -30,20 +32,22 @@ Je débute en code : **explique-moi ce que tu fais et pourquoi, étape par étap
 Chaque information identifiée est un objet `{valeur, certitude, justification}` :
 - `certitude` ∈ `tres_elevee | elevee | moyenne | faible`
 - `justification` : une phrase courte (ex. « lu sur l'étiquette, photo 3 », « déduit de la coupe, pas d'étiquette visible »).
+- Les photos sont numérotées **à partir de 1**, dans l'ordre affiché à l'écran (`photo_index` aussi).
+- **Couleurs** et **catégorie** : listes fermées (enum dans le schéma de sortie structurée), définies dans un fichier de données du code (`js/data/vinted.js`) que je peux corriger. Catégories prioritaires : Hommes > hauts (t-shirts, polos, chemises, sweats, pulls, vestes) et Hommes > chaussures. Les libellés exacts sont à vérifier dans l'appli Vinted.
+- L'IA ne renvoie **que le prix visé** ; prix affiché et prix plancher sont calculés par le code.
 
 ```json
 {
+  "genre":         {"valeur": "Homme | Femme | Enfant | Unisexe", "certitude": "...", "justification": "string"},
   "marque":        {"valeur": "string | null", "certitude": "...", "justification": "string"},
   "taille":        {"valeur": "string | null", "certitude": "...", "justification": "string"},
-  "categorie_vinted": {"valeur": "ex. Femmes > Vêtements > Pulls & sweats > Sweats", "certitude": "...", "justification": "string"},
+  "categorie_vinted": {"valeur": "choisie dans une liste fermée (enum) fournie par le code, ex. Hommes > Vêtements > Sweats et pulls > Sweats", "certitude": "...", "justification": "string"},
   "couleurs":      {"valeur": ["max 2, noms de couleurs de Vinted"], "certitude": "...", "justification": "string"},
   "matiere":       {"valeur": "string | null", "certitude": "...", "justification": "string"},
   "etat":          {"valeur": "Neuf avec étiquette | Neuf sans étiquette | Très bon état | Bon état | Satisfaisant", "certitude": "...", "justification": "string"},
-  "defauts": [{"description": "string", "photo_index": 0, "certitude": "...", "justification": "string"}],
+  "defauts": [{"description": "string", "photo_index": 1, "certitude": "...", "justification": "string"}],
   "prix": {
-    "prix_affiche": 0,
     "prix_vise": 0,
-    "prix_plancher": 0,
     "certitude": "...",
     "references_marche": [{"description": "string", "prix": 0, "source": "string"}],
     "justification": "string"
@@ -77,7 +81,7 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 - Si j'ai saisi un **prix d'achat** (achat-revente), afficher la marge brute estimée et alerter en rouge si le prix plancher est inférieur au prix d'achat.
 
 ### Règles à mettre dans le prompt de l'IA
-- **Ne jamais inventer** une marque ou une taille : si l'étiquette n'est pas lisible → `null` + source `inconnu` + ajout dans `a_verifier`.
+- **Ne jamais inventer** une marque ou une taille : si l'étiquette n'est pas lisible → `valeur: null`, certitude `faible`. Pour la taille, indiquer le système lu (EU, US, UK) ; pour les chaussures, donner la pointure EU si elle figure sur l'étiquette.
 - Pour l'usure, être **prudent et exhaustif** : bouloches, taches, décoloration, fils tirés, coutures, trous, élasticité, col/poignets. Mieux vaut signaler un doute que l'oublier. L'état choisi doit être cohérent avec les défauts trouvés.
 - La description est en **français**, ton simple et honnête. Structure : une phrase d'accroche, puis marque, taille (et conseil de coupe si visible), couleur, matière, état avec les défauts **mentionnés clairement**, puis une ligne de mots-clés. Pas d'emojis. Pas de superlatifs mensongers.
 
@@ -85,6 +89,7 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 - Chaque champ est **modifiable** et a un bouton **« Copier »**.
 - Chaque champ affiche son niveau de certitude selon l'échelle ci-dessus (rouge = moyenne ou faible). Quand je modifie ou valide un champ rouge, il passe en « Vérifié par Tom » (gris neutre).
 - Champ optionnel **« Prix d'achat »** pour les pièces achetées pour revente.
+- Champ optionnel **« Mesures »** saisi à la main (hauts : longueur, aisselle à aisselle ; chaussures : longueur intérieure), inséré automatiquement dans la description.
 - Bouton « Tout copier » pour titre + description.
 
 ## Retouche des photos
@@ -101,11 +106,11 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 - Ajouter une **ombre portée douce** sous le vêtement pour éviter l'effet « collage », surtout sur le parquet.
 - Option de réglages simples : recadrage, luminosité, rotation.
 - Les photos d'étiquettes et de défauts : **pas de détourage** par défaut (juste recadrage/luminosité), car elles doivent rester des photos réelles.
-- Export : JPEG de bonne qualité, ≈1600 px sur le plus grand côté, format portrait. Vérifie le format recommandé par Vinted. Bouton « Télécharger toutes les photos » dans l'ordre de l'annonce.
+- Export : JPEG de bonne qualité, ≈1600 px sur le plus grand côté, format portrait. Vérifie le format recommandé par Vinted. Bouton « Enregistrer toutes les photos » dans l'ordre de l'annonce : sur iPhone via le partage natif (enregistrement dans Photos), sinon téléchargement classique.
 
 ## Parcours utilisateur (écrans)
 1. **Accueil** : bouton « Nouvelle annonce ».
-2. **Photos** : prendre/importer plusieurs photos, et indiquer leur type (face, dos, étiquette, défaut, détail). Je peux réordonner les photos.
+2. **Photos** : prendre/importer plusieurs photos, et indiquer leur type (face, dos, profil, semelle, étiquette marque, étiquette taille/composition, défaut, détail). Je peux réordonner les photos.
 3. **Analyse** : chargement, puis écran de relecture des champs.
 4. **Retouche** : aperçu de chaque photo avec le fond choisi, changement de fond.
 5. **Export** : copier les textes, télécharger les photos.
@@ -122,6 +127,10 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 7. (Plus tard) Suivi achat-revente : prix d'achat, prix de vente, date, marge, export CSV pour ma comptabilité.
 
 À la fin de chaque étape : dis-moi comment tester sur mon téléphone, ce qui a été fait, et propose l'étape suivante.
+
+## Points fiscaux (à garder en tête)
+- Vendre ses propres vêtements d'occasion : non imposable.
+- Achat-revente : activité commerciale, à déclarer (en général micro-entreprise) dès le début, indépendamment des seuils DAC7 (30 ventes ou 2 000 €/an déclarés par Vinted au fisc). Vinted demande aux vendeurs pros d'utiliser Vinted Pro. À faire vérifier (URSSAF / conseiller), y compris l'impact sur le foyer fiscal des parents.
 
 ## Hors périmètre (V1)
 - Publication automatique sur Vinted ou extraction de données Vinted.
