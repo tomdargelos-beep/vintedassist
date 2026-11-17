@@ -1,9 +1,11 @@
 // Couche d'abstraction : l'appli appelle ces fonctions, qui délèguent au fournisseur choisi.
-// Pour passer à Claude plus tard : créer js/ai/claude.js avec les mêmes fonctions et l'ajouter ici.
+// Principal = Claude (fiable, payant) ; Gemini (gratuit) sert de secours si une clé est saisie, et inversement.
 import * as gemini from './gemini.js';
+import * as claude from './claude.js';
 import { redimensionner } from '../images.js';
 
-const FOURNISSEURS = { gemini };
+const FOURNISSEURS = { claude, gemini };
+export const NOMS = { claude: 'Claude Opus 5.5', gemini: 'Gemini (gratuit)' };
 
 function blobEnBase64(blob) {
   return new Promise((resolve, reject) => {
@@ -14,10 +16,33 @@ function blobEnBase64(blob) {
   });
 }
 
-export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
-  const f = FOURNISSEURS[reglages.fournisseur] || gemini;
-  const base = { cle: reglages.apiKey, modele: reglages.modele };
+const cleDe = (nom, r) => (nom === 'claude' ? r.cleClaude : r.apiKey);
 
+// Fournisseurs utilisables, dans l'ordre d'essai.
+export function ordreFournisseurs(r) {
+  const principal = r.fournisseur === 'gemini' ? 'gemini' : 'claude';
+  const secours = principal === 'claude' ? 'gemini' : 'claude';
+  return [principal, secours].filter(n => cleDe(n, r));
+}
+
+// Essaie chaque fournisseur ; ne bascule que sur une erreur temporaire (surcharge, réseau, quota).
+async function avecSecours(r, onEtape, fn) {
+  const ordre = ordreFournisseurs(r);
+  if (!ordre.length) throw new Error('Aucune clé API enregistrée. Ajoute-la dans les Réglages.');
+  let derniere;
+  for (const [i, nom] of ordre.entries()) {
+    try {
+      return { nom, res: await fn(FOURNISSEURS[nom], { cle: cleDe(nom, r), modele: r.modele }) };
+    } catch (e) {
+      derniere = e;
+      if (e.status === undefined || i === ordre.length - 1) throw e;
+      onEtape(`${NOMS[nom]} indisponible, bascule sur ${NOMS[ordre[i + 1]]}…`);
+    }
+  }
+  throw derniere;
+}
+
+export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
   onEtape('Préparation des photos…');
   const images = [];
   for (const p of photos) {
@@ -26,7 +51,8 @@ export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
   }
 
   onEtape('Analyse des photos par l\'IA…');
-  const analyse = await f.analyserPhotos({ ...base, photos, images, onEtape });
+  const { nom, res: analyse } = await avecSecours(reglages, onEtape,
+    (f, base) => f.analyserPhotos({ ...base, photos, images, onEtape }));
 
   onEtape('Recherche des prix du marché…');
   let marche = null;
@@ -39,8 +65,10 @@ export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
       analyse.etat?.valeur && `état ${analyse.etat.valeur}`,
       analyse.matiere?.valeur && `matière ${analyse.matiere.valeur}`
     ].filter(Boolean).join(', ');
-    // On réutilise le modèle qui a fonctionné pour l'analyse.
-    marche = await f.rechercherMarche({ ...base, modele: analyse.modele_utilise || base.modele, resume, onEtape });
+    // On commence par le fournisseur qui a réussi l'analyse.
+    const r2 = { ...reglages, fournisseur: nom };
+    marche = (await avecSecours(r2, onEtape, (f, base) =>
+      f.rechercherMarche({ ...base, modele: nom === 'gemini' ? (analyse.modele_utilise || base.modele) : base.modele, resume, onEtape }))).res;
   } catch (e) {
     console.warn('Recherche de marché impossible', e);
     erreurMarche = e.message;
@@ -55,7 +83,6 @@ export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
   return analyse;
 }
 
-export async function listerModeles(reglages) {
-  const f = FOURNISSEURS[reglages.fournisseur] || gemini;
-  return f.listerModeles(reglages.apiKey);
+export async function listerModeles(nom, cle) {
+  return FOURNISSEURS[nom].listerModeles(cle);
 }

@@ -43,3 +43,18 @@ export const SCHEMA_ANALYSE = {
   required: ['genre', 'marque', 'taille', 'categorie_vinted', 'couleurs', 'matiere', 'etat', 'defauts', 'prix', 'titre', 'description', 'mots_cles'],
   propertyOrdering: ['genre', 'marque', 'taille', 'categorie_vinted', 'couleurs', 'matiere', 'etat', 'defauts', 'prix', 'titre', 'description', 'mots_cles']
 };
+
+// Conversion vers le format JSON Schema standard (utilisé par Claude) :
+// types en minuscules, null autorisé via anyOf, objets fermés (additionalProperties: false).
+export function enJsonSchema(s) {
+  const { type, nullable, propertyOrdering, maxItems, properties, items, ...reste } = s;
+  let out = { ...reste, type: type.toLowerCase() };
+  if (properties) {
+    out.properties = Object.fromEntries(Object.entries(properties).map(([k, v]) => [k, enJsonSchema(v)]));
+    out.required = s.required || Object.keys(properties);
+    out.additionalProperties = false;
+  }
+  if (items) out.items = enJsonSchema(items);
+  if (nullable) out = { anyOf: [out, { type: 'null' }] };
+  return out;
+}

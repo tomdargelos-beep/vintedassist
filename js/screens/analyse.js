@@ -36,8 +36,8 @@ export async function ecranAnalyse(app) {
       h('button', { class: 'btn', onclick: () => aller('photos') }, 'Aller aux photos'));
     return;
   }
-  if (!reglages.apiKey) {
-    app.append(h('div', { class: 'hint' }, 'Aucune clé API Gemini enregistrée.',
+  if (!reglages.cleClaude && !reglages.apiKey) {
+    app.append(h('div', { class: 'hint' }, 'Aucune clé API enregistrée (Claude ou Gemini).',
       h('button', { class: 'btn', onclick: () => aller('reglages') }, 'Ouvrir les Réglages')));
     return;
   }
@@ -52,7 +52,7 @@ export async function ecranAnalyse(app) {
 async function lancer(app, annonce, reglages) {
   const etape = h('p', { class: 'chargement' }, 'Démarrage…');
   app.replaceChildren(h('div', { class: 'card centre' }, h('div', { class: 'spinner' }), etape,
-    h('p', { class: 'muted' }, 'Compte 10 à 40 secondes (plus si Gemini est surchargé).')));
+    h('p', { class: 'muted' }, 'Compte 20 à 60 secondes.')));
   try {
     annonce.analyse = await analyserAnnonce(annonce.photos, reglages, t => { etape.textContent = t; });
     annonce.saisie = { mesures: '', prixAchat: '' };

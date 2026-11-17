@@ -2,8 +2,9 @@
 const CLE = 'va.reglages';
 
 export const DEFAUTS = {
-  fournisseur: 'gemini',
-  apiKey: '',
+  fournisseur: 'claude',  // principal : claude | gemini
+  cleClaude: '',
+  apiKey: '',              // clé Gemini (secours)
   modele: 'gemini-flash-latest', // alias officiel qui suit le dernier modèle Flash
   margePct: 15,      // prix affiché = prix visé + marge
   plancherPct: 10,   // prix plancher = prix visé - écart
@@ -30,12 +31,16 @@ export function nettoyerCle(cle) {
 }
 
 // Diagnostic sans révéler la clé : longueur et début.
-export function diagnosticCle(cle) {
+export function diagnosticCle(cle, fournisseur = 'gemini') {
   const c = nettoyerCle(cle);
   if (!c) return 'Aucune clé saisie.';
-  const debut = c.slice(0, 4);
+  if (fournisseur === 'claude') {
+    return c.startsWith('sk-ant-')
+      ? `Format correct (commence par « sk-ant- », ${c.length} caractères).`
+      : `Format inhabituel : commence par « ${c.slice(0, 4)} ». Une clé Claude commence par « sk-ant- ».`;
+  }
   const ok = c.startsWith('AIza') && c.length === 39;
   return ok
     ? `Format correct (${c.length} caractères, commence par « AIza »).`
-    : `Format inhabituel : ${c.length} caractères, commence par « ${debut} ». Une clé Gemini fait normalement 39 caractères et commence par « AIza ».`;
+    : `Format inhabituel : ${c.length} caractères, commence par « ${c.slice(0, 4)} ». Une clé Gemini fait normalement 39 caractères et commence par « AIza ».`;
 }
