@@ -1,6 +1,7 @@
 // Fournisseur Gemini (API Google AI Studio, appelée directement depuis le navigateur).
 import { SCHEMA_ANALYSE } from './schema.js';
 import { promptAnalyse, promptMarche } from './prompt.js';
+import { nettoyerCle } from '../settings.js';
 
 const BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
@@ -9,7 +10,7 @@ async function appel(cle, chemin, corps) {
   try {
     rep = await fetch(`${BASE}/${chemin}`, {
       method: corps ? 'POST' : 'GET',
-      headers: { 'x-goog-api-key': cle, ...(corps ? { 'Content-Type': 'application/json' } : {}) },
+      headers: { 'x-goog-api-key': nettoyerCle(cle), ...(corps ? { 'Content-Type': 'application/json' } : {}) },
       body: corps ? JSON.stringify(corps) : undefined
     });
   } catch {
@@ -18,6 +19,7 @@ async function appel(cle, chemin, corps) {
   const json = await rep.json().catch(() => ({}));
   if (!rep.ok) {
     const msg = json?.error?.message || rep.statusText;
+    if (rep.status === 401 || (rep.status === 400 && /api key/i.test(msg))) throw new Error('Clé API refusée par Google (clé invalide, incomplète ou supprimée). Recopie-la depuis Google AI Studio.');
     if (rep.status === 400 && /api key/i.test(msg)) throw new Error('Clé API invalide. Vérifie-la dans les Réglages.');
     if (rep.status === 403) throw new Error('Clé API refusée (403). Vérifie qu\'elle autorise l\'API Gemini.');
     if (rep.status === 404) throw new Error('Modèle introuvable. Utilise « Tester la clé » dans les Réglages pour choisir un modèle disponible.');

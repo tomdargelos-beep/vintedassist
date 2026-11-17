@@ -23,3 +23,19 @@ export function ecrireReglages(maj) {
   localStorage.setItem(CLE, JSON.stringify(r));
   return r;
 }
+
+// Nettoie une clé collée depuis iOS : espaces, retours à la ligne, caractères invisibles, guillemets.
+export function nettoyerCle(cle) {
+  return String(cle || '').replace(/[\s\u200B-\u200D\u2060\uFEFF"'«»“”]/g, '');
+}
+
+// Diagnostic sans révéler la clé : longueur et début.
+export function diagnosticCle(cle) {
+  const c = nettoyerCle(cle);
+  if (!c) return 'Aucune clé saisie.';
+  const debut = c.slice(0, 4);
+  const ok = c.startsWith('AIza') && c.length === 39;
+  return ok
+    ? `Format correct (${c.length} caractères, commence par « AIza »).`
+    : `Format inhabituel : ${c.length} caractères, commence par « ${debut} ». Une clé Gemini fait normalement 39 caractères et commence par « AIza ».`;
+}

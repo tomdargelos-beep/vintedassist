@@ -1,5 +1,5 @@
 import { h, toast } from '../ui.js';
-import { lireReglages, ecrireReglages } from '../settings.js';
+import { lireReglages, ecrireReglages, nettoyerCle, diagnosticCle } from '../settings.js';
 import { VERSION_APP } from '../app.js';
 import { listerModeles } from '../ai/provider.js';
 
@@ -22,13 +22,15 @@ export async function ecranReglages(app) {
   const modele = h('input', { type: 'text', value: r.modele, autocapitalize: 'off', spellcheck: false });
   const listeModeles = h('div', { class: 'muted' });
   async function tester() {
-    listeModeles.textContent = 'Test en cours…';
+    cle.value = nettoyerCle(cle.value);
+    listeModeles.textContent = 'Test en cours… ' + diagnosticCle(cle.value);
     try {
       const noms = (await listerModeles({ ...r, apiKey: cle.value.trim() })).filter(n => /flash/.test(n));
-      listeModeles.replaceChildren(h('p', {}, 'Clé valide. Modèles Flash disponibles (touche pour choisir) :'),
+      ecrireReglages({ apiKey: cle.value });
+      listeModeles.replaceChildren(h('p', {}, 'Clé valide et enregistrée. Modèles Flash disponibles (touche pour choisir) :'),
         ...noms.map(n => h('button', { class: 'mini', style: 'margin:3px', onclick: () => { modele.value = n; } }, n)));
     } catch (e) {
-      listeModeles.textContent = e.message;
+      listeModeles.textContent = e.message + ' ' + diagnosticCle(cle.value);
     }
   }
   const marge = h('input', { type: 'number', inputMode: 'numeric', min: 0, max: 100, value: r.margePct });
@@ -37,7 +39,7 @@ export async function ecranReglages(app) {
 
   function enregistrer() {
     ecrireReglages({
-      apiKey: cle.value.trim(),
+      apiKey: nettoyerCle(cle.value),
       modele: modele.value.trim() || 'gemini-flash-latest',
       margePct: Number(marge.value) || 0,
       plancherPct: Number(plancher.value) || 0,
