@@ -26,7 +26,7 @@ export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
   }
 
   onEtape('Analyse des photos par l\'IA…');
-  const analyse = await f.analyserPhotos({ ...base, photos, images });
+  const analyse = await f.analyserPhotos({ ...base, photos, images, onEtape });
 
   onEtape('Recherche des prix du marché…');
   let marche = null;
@@ -39,7 +39,8 @@ export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
       analyse.etat?.valeur && `état ${analyse.etat.valeur}`,
       analyse.matiere?.valeur && `matière ${analyse.matiere.valeur}`
     ].filter(Boolean).join(', ');
-    marche = await f.rechercherMarche({ ...base, resume });
+    // On réutilise le modèle qui a fonctionné pour l'analyse.
+    marche = await f.rechercherMarche({ ...base, modele: analyse.modele_utilise || base.modele, resume, onEtape });
   } catch (e) {
     console.warn('Recherche de marché impossible', e);
     erreurMarche = e.message;

@@ -52,7 +52,7 @@ export async function ecranAnalyse(app) {
 async function lancer(app, annonce, reglages) {
   const etape = h('p', { class: 'chargement' }, 'Démarrage…');
   app.replaceChildren(h('div', { class: 'card centre' }, h('div', { class: 'spinner' }), etape,
-    h('p', { class: 'muted' }, 'Compte 10 à 40 secondes.')));
+    h('p', { class: 'muted' }, 'Compte 10 à 40 secondes (plus si Gemini est surchargé).')));
   try {
     annonce.analyse = await analyserAnnonce(annonce.photos, reglages, t => { etape.textContent = t; });
     annonce.saisie = { mesures: '', prixAchat: '' };
@@ -215,6 +215,7 @@ function relecture(app, annonce, reglages) {
     h('div', { class: 'card' }, h('label', {}, 'Mots-clés'), h('p', {}, (a.mots_cles || []).join(', '))),
     h('p', { class: 'muted' }, `Couleurs autorisées : ${COULEURS.join(', ')}.`),
     h('button', { class: 'btn', disabled: true }, 'Retouche des photos (étape 4)'),
+    a.modele_utilise ? h('p', { class: 'muted', style: 'text-align:center' }, `Analysé avec ${a.modele_utilise}`) : null,
     h('button', {
       class: 'btn btn-danger', onclick: async () => {
         if (!confirm('Relancer l\'analyse ? Tes corrections seront perdues.')) return;
