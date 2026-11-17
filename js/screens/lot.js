@@ -127,7 +127,7 @@ async function traiter(app) {
   });
   const fin = h('div', {});
   app.replaceChildren(
-    h('p', { class: 'muted' }, 'Garde l\'appli ouverte pendant la préparation (environ 1 minute par annonce).'),
+    h('p', { class: 'muted' }, reglages.retoucheAuto ? 'Garde l\'appli ouverte pendant la préparation (environ 1 minute par annonce).' : 'Garde l\'appli ouverte pendant l\'analyse (environ 30 secondes par annonce).'),
     ...lignes.map(l => l.noeud), fin);
 
   // Les photos sont rangées dans l'ordre d'une annonce : face, dos, …, étiquettes, défauts.
@@ -145,7 +145,7 @@ async function traiter(app) {
       a.analyse = await analyserAnnonce(a.photos, reglages, t => { l.etat.textContent = t; });
       a.saisie = { mesures: '', prixAchat: '' };
       await sauverAnnonce(a);
-      await preparerPhotos(a, { onEtape: t => { l.etat.textContent = t; }, sauver: () => sauverAnnonce(a), fondDefaut: reglages.fondDefaut });
+      if (reglages.retoucheAuto) await preparerPhotos(a, { onEtape: t => { l.etat.textContent = t; }, sauver: () => sauverAnnonce(a), fondDefaut: reglages.fondDefaut });
       let note = '';
       if (reglages.iaImage && reglages.repassageAuto && reglages.apiKey) {
         const echecs = await repasserTout(a, reglages, { onEtape: t => { l.etat.textContent = t; }, sauver: () => sauverAnnonce(a) });

@@ -89,6 +89,7 @@ export async function ecranReglages(app) {
   const repassageAuto = h('input', { type: 'checkbox', checked: !!r.repassageAuto });
   const iaImage = h('input', { type: 'checkbox', checked: !!r.iaImage });
   const redressementAuto = h('input', { type: 'checkbox', checked: r.redressementAuto !== false });
+  const retoucheAuto = h('input', { type: 'checkbox', checked: !!r.retoucheAuto });
 
   function enregistrer() {
     ecrireReglages({
@@ -103,7 +104,8 @@ export async function ecranReglages(app) {
       fondDefaut: fond.value,
       repassageAuto: repassageAuto.checked,
       iaImage: iaImage.checked,
-      redressementAuto: redressementAuto.checked
+      redressementAuto: redressementAuto.checked,
+      retoucheAuto: retoucheAuto.checked
     });
     toast('Réglages enregistrés');
   }
@@ -121,6 +123,8 @@ export async function ecranReglages(app) {
       h('p', { class: 'muted' }, 'Prix plancher = prix visé moins cet écart. En dessous, tu refuses les offres.')
     ),
     h('div', { class: 'card' }, h('label', {}, 'Fond par défaut'), fond,
+      h('label', { class: 'case' }, retoucheAuto, ' Détourer dans l\'appli après l\'analyse (mode lot)'),
+      h('p', { class: 'muted' }, 'Décoché : le mode lot ne fait que trier et analyser ; les photos se retouchent dans l\'appli Gemini.'),
       h('label', { class: 'case' }, redressementAuto, ' Redresser automatiquement le vêtement'),
       h('p', { class: 'muted' }, 'Remet le vêtement d\'aplomb (simple rotation, gratuit, le vêtement n\'est pas modifié).'),
       h('label', { class: 'case' }, iaImage, ' Repassage par l\'IA (payant chez Google)'),

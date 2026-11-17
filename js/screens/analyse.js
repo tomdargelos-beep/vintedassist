@@ -4,6 +4,7 @@ import { lireReglages } from '../settings.js';
 import { analyserAnnonce } from '../ai/provider.js';
 import { calculerPrix } from '../prix.js';
 import { utiliseIA } from '../retouche.js';
+import { promptGeminiApp, envoyerAGemini, fondPourGemini, photosPourGemini } from '../gemini-app.js';
 import { CATEGORIES, COULEURS, ETATS, GENRES } from '../data/vinted.js';
 import { aller, VERSION_APP } from '../app.js';
 import { ordreFournisseurs, NOMS } from '../ai/provider.js';
@@ -135,20 +136,16 @@ function relecture(app, annonce, reglages) {
   majTitre();
 
   const desc = h('textarea', { rows: 10 });
+  // Description finale : paragraphe (+ mesures), mention retouche éventuelle, puis la ligne de hashtags.
   const descFinale = () => {
-    const d = (a.description || '').trim();
-    const lignes = d.split('\n');
-    if (s.mesures.trim()) {
-      const ligneMesures = `Mesures : ${s.mesures.trim()}`;
-      if (lignes.length > 1) lignes.splice(lignes.length - 1, 0, ligneMesures);
-      else lignes.push(ligneMesures);
-    }
-    // Mention obligatoire dès qu'une photo retouchée par l'IA est utilisée.
-    if (utiliseIA(annonce) && reglages.mentionIA?.trim()) {
-      if (lignes.length > 1) lignes.splice(lignes.length - 1, 0, '', reglages.mentionIA.trim());
-      else lignes.push('', reglages.mentionIA.trim());
-    }
-    return lignes.join('\n');
+    const lignes = (a.description || '').trim().split('\n');
+    let hashtags = '';
+    if (lignes.length > 1 && lignes[lignes.length - 1].trim().startsWith('#')) hashtags = lignes.pop().trim();
+    const blocs = [lignes.join('\n').trim()];
+    if (s.mesures.trim()) blocs[0] += `\nMesures : ${s.mesures.trim()}`;
+    if (utiliseIA(annonce) && reglages.mentionIA?.trim()) blocs.push(reglages.mentionIA.trim());
+    if (hashtags) blocs.push(hashtags);
+    return blocs.filter(Boolean).join('\n\n');
   };
   desc.value = a.description || '';
   desc.addEventListener('input', () => { a.description = desc.value; sauver(); });
@@ -203,6 +200,32 @@ function relecture(app, annonce, reglages) {
     h('label', {}, 'Prix d\'achat (€, si achat-revente)'), prixAchat
   );
 
+  // Retouche des photos via l'appli Gemini : 1) copier le prompt, 2) envoyer les photos.
+  function blocGemini() {
+    const n = photosPourGemini(annonce).length;
+    const fond = fondPourGemini(annonce);
+    const etat = h('p', { class: 'muted' });
+    const mention = h('input', { type: 'checkbox', checked: !!annonce.retoucheGemini });
+    mention.addEventListener('change', async () => { annonce.retoucheGemini = mention.checked; await sauverAnnonce(); location.reload(); });
+    return h('div', { class: 'card' },
+      h('label', {}, 'Photos retouchées par Gemini'),
+      h('p', { class: 'muted' }, n
+        ? `${n} photo(s) du vêtement (face, dos, profil) à envoyer. Fond prévu : ${fond.nom.split(' (')[0]} (${fond.raison}). Les étiquettes et défauts restent des photos réelles.`
+        : 'Aucune photo de face, de dos ou de profil dans cette annonce.'),
+      h('button', { class: 'btn', disabled: !n, onclick: () => { copier(promptGeminiApp(annonce)); etat.textContent = 'Prompt copié. Étape 2 : envoie les photos.'; } }, '1. Copier le prompt Gemini'),
+      h('button', { class: 'btn btn-primary', disabled: !n, onclick: async () => {
+        try {
+          const ok = await envoyerAGemini(annonce);
+          if (!ok) { etat.textContent = 'Partage indisponible ici : enregistre les photos et ajoute-les dans Gemini à la main.'; return; }
+          annonce.retoucheGemini = true; mention.checked = true;
+          await sauverAnnonce();
+          etat.textContent = 'Dans Gemini : colle le prompt, envoie, puis enregistre les images renvoyées. La mention est ajoutée à la description.';
+        } catch (e) { etat.textContent = 'Envoi impossible : ' + e.message; }
+      } }, '2. Envoyer les photos à Gemini'),
+      etat,
+      h('label', { class: 'case' }, mention, ' Mention « photos retouchées » dans la description'));
+  }
+
   app.append(
     compteur,
     h('div', { class: 'card' },
@@ -224,7 +247,8 @@ function relecture(app, annonce, reglages) {
     blocPrix,
     h('div', { class: 'card' }, h('label', {}, 'Mots-clés'), h('p', {}, (a.mots_cles || []).join(', '))),
     h('p', { class: 'muted' }, `Couleurs autorisées : ${COULEURS.join(', ')}.`),
-    h('button', { class: 'btn btn-primary', onclick: () => aller('retouche') }, 'Retouche et enregistrement des photos'),
+    blocGemini(),
+    h('button', { class: 'btn', onclick: () => aller('retouche') }, 'Retouche dans l\'appli (détourage, sans IA)'),
     h('button', { class: 'btn', onclick: () => aller('photos') }, 'Modifier les photos'),
     a.modele_utilise ? h('p', { class: 'muted', style: 'text-align:center' }, `Analysé avec ${a.modele_utilise}`) : null,
     h('button', {

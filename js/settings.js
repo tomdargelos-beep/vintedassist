@@ -7,18 +7,24 @@ export const DEFAUTS = {
   apiKey: '',              // clé Gemini (secours)
   modele: 'gemini-flash-latest', // alias officiel qui suit le dernier modèle Flash
   modeleImage: '',         // modèle Gemini d'édition d'image (vide = détection automatique)
-  mentionIA: 'Photo de couverture retouchée numériquement (fond et défroissage) pour mettre l\'article en valeur. Les photos suivantes montrent l\'article réel, sans retouche. N\'hésitez pas à me demander des photos supplémentaires ou de détail.',
+  mentionIA: 'Photos de l\'article retouchées numériquement (fond et défroissage) pour le mettre en valeur ; l\'article est bien celui photographié. Les photos d\'étiquettes et de détails ne sont pas retouchées. N\'hésitez pas à me demander des photos supplémentaires ou de détail.',
   margePct: 15,      // prix affiché = prix visé + marge
   plancherPct: 10,   // prix plancher = prix visé - écart
   fondDefaut: 'auto', // auto | studio | blanc | gris-clair | anthracite | noir
   iaImage: false,       // repassage par IA (Gemini image, payant) : désactivé par choix de Tom
   repassageAuto: false, // version IA générée automatiquement (si iaImage)
-  redressementAuto: true // remet le vêtement d'aplomb (rotation seule, gratuit)
+  redressementAuto: true, // remet le vêtement d'aplomb (rotation seule, gratuit)
+  retoucheAuto: false     // détourage dans l'appli après l'analyse (sinon : retouche via l'appli Gemini)
 };
+
+// Ancienne mention par défaut (repassage d'une seule photo) : devenue inexacte avec la retouche via Gemini.
+const ANCIENNE_MENTION = 'Photo de couverture retouchée numériquement (fond et défroissage) pour mettre l\'article en valeur. Les photos suivantes montrent l\'article réel, sans retouche. N\'hésitez pas à me demander des photos supplémentaires ou de détail.';
 
 export function lireReglages() {
   try {
-    return { ...DEFAUTS, ...JSON.parse(localStorage.getItem(CLE) || '{}') };
+    const r = { ...DEFAUTS, ...JSON.parse(localStorage.getItem(CLE) || '{}') };
+    if (r.mentionIA === ANCIENNE_MENTION) r.mentionIA = DEFAUTS.mentionIA;
+    return r;
   } catch {
     return { ...DEFAUTS };
   }

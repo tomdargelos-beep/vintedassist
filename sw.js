@@ -1,13 +1,13 @@
 // Service worker : met l'appli en cache pour qu'elle s'ouvre vite et hors connexion.
 // Stratégie « réseau d'abord » : en ligne tu as toujours la dernière version, hors ligne le cache prend le relais.
-const CACHE = 'va-v0.8.0';
+const CACHE = 'va-v0.9.0';
 const CACHE_DONNEES = 'va-donnees-1'; // conservé d'une version à l'autre
 const COQUILLE = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/app.js', './js/ui.js', './js/db.js', './js/state.js', './js/settings.js', './js/images.js', './js/prix.js', './js/data/vinted.js',
   './js/ai/provider.js', './js/ai/gemini.js', './js/ai/claude.js', './js/vendor/anthropic-sdk-1.4.0.mjs', './js/ai/schema.js', './js/ai/prompt.js',
   './js/screens/accueil.js', './js/screens/photos.js', './js/screens/analyse.js',
-  './js/screens/reglages.js', './js/screens/historique.js', './js/screens/retouche.js', './js/screens/lot.js', './js/retouche.js',
+  './js/screens/reglages.js', './js/screens/historique.js', './js/screens/retouche.js', './js/screens/lot.js', './js/retouche.js', './js/gemini-app.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'
 ];
 

@@ -309,7 +309,7 @@ export function photosAnnonce(annonce, rendus) {
   return out;
 }
 
-export const utiliseIA = annonce => !!lireReglages().iaImage && annonce.photos.some(p => p.repasse && (p.versionIA || 'les-deux') !== 'reelle');
+export const utiliseIA = annonce => !!annonce.retoucheGemini || (!!lireReglages().iaImage && annonce.photos.some(p => p.repasse && (p.versionIA || 'les-deux') !== 'reelle'));
 
 // Produit la photo finale (JPEG) d'une photo de l'annonce.
 export async function rendre(p, fond, qualite = 0.9) {
