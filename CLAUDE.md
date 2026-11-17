@@ -24,6 +24,7 @@ Ce que je vends : surtout de l'**homme**, principalement des **hauts** (t-shirts
 
 ## Analyse IA des photos
 - Fournisseur par défaut : **API Google Gemini** (offre gratuite, modèle « Flash » multimodal). Note : mon abonnement Gemini Pro (appli grand public) ne donne **pas** d'accès à l'API ; la clé API se crée séparément et gratuitement sur Google AI Studio. Vérifie dans la doc officielle le nom du modèle actuel au lieu d'en coder un de mémoire.
+- Modèle : alias `gemini-flash-latest` par défaut (modifiable dans les Réglages, bouton « Tester la clé » qui liste les modèles disponibles). Recherche de prix : 2e appel avec l'outil `google_search`, sortie JSON lue dans le texte (le JSON strict n'est pas combiné à la recherche).
 - Prévois une **couche d'abstraction** (un module `aiProvider`) pour pouvoir passer plus tard à l'API Claude sans tout réécrire.
 - **Clé API** : je la saisis dans un écran « Réglages » ; elle est stockée uniquement dans le `localStorage` de l'appareil. Elle ne doit **jamais** apparaître dans le code ni dans le dépôt GitHub. Ajoute un `.gitignore` adapté.
 - Réduis les images avant l'envoi (≈1024 px sur le plus grand côté) pour limiter le coût et le temps.

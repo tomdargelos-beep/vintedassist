@@ -56,3 +56,9 @@ export async function nouvelleAnnonce() {
 export function typeParDefaut(index) {
   return index === 0 ? 'face' : index === 1 ? 'dos' : 'detail';
 }
+
+// Sauvegarde immédiate quand l'appli passe en arrière-plan (ex. bascule vers Vinted sur iPhone).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') sauverAnnonce();
+});
+window.addEventListener('pagehide', () => sauverAnnonce());

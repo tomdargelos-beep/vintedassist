@@ -1,9 +1,10 @@
 // Service worker : met l'appli en cache pour qu'elle s'ouvre vite et hors connexion.
 // Stratégie « réseau d'abord » : en ligne tu as toujours la dernière version, hors ligne le cache prend le relais.
-const CACHE = 'va-v0.2.0';
+const CACHE = 'va-v0.3.0';
 const COQUILLE = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
-  './js/app.js', './js/ui.js', './js/db.js', './js/state.js', './js/settings.js', './js/images.js',
+  './js/app.js', './js/ui.js', './js/db.js', './js/state.js', './js/settings.js', './js/images.js', './js/prix.js', './js/data/vinted.js',
+  './js/ai/provider.js', './js/ai/gemini.js', './js/ai/schema.js', './js/ai/prompt.js',
   './js/screens/accueil.js', './js/screens/photos.js', './js/screens/analyse.js',
   './js/screens/reglages.js', './js/screens/historique.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'

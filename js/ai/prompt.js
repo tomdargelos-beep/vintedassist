@@ -1,0 +1,45 @@
+// Consignes données à l'IA (communes à tous les fournisseurs).
+import { TYPES_PHOTO } from '../state.js';
+
+export const ECHELLE = `Échelle de certitude, à appliquer strictement :
+- tres_elevee : lu directement et nettement sur une étiquette ou un logo.
+- elevee : visible mais un peu flou, ou recoupé par plusieurs indices.
+- moyenne : déduit (coupe, style, logo partiel), sans preuve directe.
+- faible : supposition, ou information absente des photos.
+Si une valeur est inconnue : valeur null et certitude faible. Ne jamais inventer.`;
+
+export function descriptionPhotos(photos) {
+  return photos.map((p, i) => {
+    const t = TYPES_PHOTO.find(x => x.id === p.type)?.label || p.type;
+    return `Photo ${i + 1} : ${t}`;
+  }).join('\n');
+}
+
+export function promptAnalyse(photos) {
+  return `Tu aides un vendeur particulier à créer une annonce Vinted (France) pour l'article photographié.
+Les photos sont numérotées à partir de 1, dans cet ordre :
+${descriptionPhotos(photos)}
+
+${ECHELLE}
+
+Règles :
+- Ne jamais inventer une marque ou une taille. Si l'étiquette n'est pas lisible : valeur null, certitude faible.
+- Pour la taille, préciser le système lu (ex. "M", "EU 43", "US 10 / EU 44"). Pour les chaussures, donner la pointure EU si elle figure sur l'étiquette.
+- Usure : être prudent et exhaustif (bouloches, taches, décoloration, fils tirés, coutures, trous, élasticité, col, poignets ; pour les chaussures : semelle, talon, plis, intérieur, lacets). Mieux vaut signaler un doute que l'oublier. Chaque défaut indique le numéro de la photo où il est visible (0 si non localisé).
+- L'état choisi doit être cohérent avec les défauts trouvés.
+- couleurs : 1 ou 2 couleurs maximum, choisies dans la liste autorisée.
+- prix.prix_vise : prix réaliste en euros qu'un vendeur peut encaisser sur Vinted pour cette pièce d'occasion (marque, type, état). C'est une estimation provisoire ; références de marché vides ici.
+- titre : 60 caractères maximum, format : Type + Marque + détail clé + Taille. Pas d'emoji.
+- description : en français, ton simple et honnête, sans emoji ni superlatif mensonger. Structure : une phrase d'accroche ; marque ; taille (et conseil de coupe si visible) ; couleur ; matière ; état avec les défauts mentionnés clairement ; puis une dernière ligne de mots-clés.
+- mots_cles : 5 à 10 mots-clés utiles pour la recherche.
+- Toutes les justifications : une phrase courte qui cite la photo (ex. "lu sur l'étiquette, photo 3").`;
+}
+
+export function promptMarche(resume) {
+  return `Recherche sur le web les prix de seconde main en France (sites de revente, annonces d'occasion, comparateurs) pour un article comparable à :
+${resume}
+
+N'utilise pas Vinted comme source. Réponds UNIQUEMENT avec un objet JSON, sans texte autour, de la forme :
+{"prix_vise": nombre en euros, "certitude": "tres_elevee|elevee|moyenne|faible", "references_marche": [{"description": "article comparable", "prix": nombre, "source": "nom du site"}], "justification": "une phrase"}
+Donne 2 à 4 références réelles trouvées. Si tu n'en trouves pas, references_marche vide et certitude faible. Le prix visé est ce qu'un particulier peut réellement encaisser pour cette pièce dans cet état.`;
+}

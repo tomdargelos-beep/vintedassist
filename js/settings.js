@@ -2,7 +2,9 @@
 const CLE = 'va.reglages';
 
 export const DEFAUTS = {
+  fournisseur: 'gemini',
   apiKey: '',
+  modele: 'gemini-flash-latest', // alias officiel qui suit le dernier modèle Flash
   margePct: 15,      // prix affiché = prix visé + marge
   plancherPct: 10,   // prix plancher = prix visé - écart
   fondDefaut: 'auto' // auto | blanc | gris-clair | anthracite | noir
