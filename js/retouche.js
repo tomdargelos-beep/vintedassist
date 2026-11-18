@@ -1,0 +1,385 @@
+// Retouche des photos : détourage (dans le navigateur), choix du fond selon le contraste,
+// composition avec ombre douce, rotation, luminosité, export JPEG.
+// Le vêtement n'est jamais modifié : seul le fond change (le détourage ne fait que découper).
+import { TYPES_SANS_DETOURAGE } from './state.js';
+import { repasser, modelesImage } from './ai/gemini.js';
+import { lireReglages } from './settings.js';
+
+export const FONDS = {
+  studio: { nom: 'Studio', couleur: '#f1f1f0', L: 241 },
+  blanc: { nom: 'Blanc', couleur: '#ffffff', L: 255 },
+  'gris-clair': { nom: 'Gris clair', couleur: '#d9d9d9', L: 217 },
+  anthracite: { nom: 'Anthracite', couleur: '#3a3a3c', L: 58 },
+  noir: { nom: 'Noir', couleur: '#141414', L: 20 }
+};
+const SEUIL_CONTRASTE = 70; // écart minimal de luminance (0-255) entre vêtement et fond
+const SORTIE = { largeur: 1200, hauteur: 1600 }; // portrait 3:4, ~1600 px sur le grand côté
+const DONNEES = new URL('../assets/detourage/', import.meta.url).href;
+
+let moduleDetourage = null;
+const chargerModule = () => (moduleDetourage ??= import('./vendor/bg-removal-1.4.5.mjs'));
+
+export const doitDetourer = p => !TYPES_SANS_DETOURAGE.includes(p.type) && !p.garderOriginal;
+
+export async function detourer(blob, onProgres = () => {}) {
+  const { removeBackground } = await chargerModule();
+  return removeBackground(blob, {
+    publicPath: DONNEES,
+    model: 'small',
+    output: { format: 'image/png' },
+    progress: (cle, actuel, total) => onProgres(cle, actuel, total)
+  });
+}
+
+// Luminance moyenne du vêtement (pixels du masque uniquement), de 0 (noir) à 255 (blanc).
+export async function luminance(pngDetoure) {
+  const bmp = await createImageBitmap(pngDetoure);
+  const r = Math.min(1, 200 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(bmp.width * r));
+  c.height = Math.max(1, Math.round(bmp.height * r));
+  const ctx = c.getContext('2d');
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  const d = ctx.getImageData(0, 0, c.width, c.height).data;
+  let somme = 0, n = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] > 128) { somme += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]; n++; }
+  }
+  return n ? somme / n : 128;
+}
+
+// Efface les « miettes » de fond gardées par erreur : ne garde que les grandes zones d'un seul tenant
+// (au moins 15 % de la plus grande, pour garder les deux chaussures d'une paire). Le vêtement n'est pas modifié.
+export async function nettoyer(pngDetoure) {
+  const bmp = await createImageBitmap(pngDetoure);
+  const r = Math.min(1, 300 / Math.max(bmp.width, bmp.height));
+  const l = Math.max(1, Math.round(bmp.width * r)), hh = Math.max(1, Math.round(bmp.height * r));
+  const petit = document.createElement('canvas');
+  petit.width = l; petit.height = hh;
+  const pctx = petit.getContext('2d');
+  pctx.drawImage(bmp, 0, 0, l, hh);
+  const img = pctx.getImageData(0, 0, l, hh);
+  const d = img.data;
+  const zone = new Int32Array(l * hh).fill(-1);
+  const tailles = [];
+  for (let i = 0; i < l * hh; i++) {
+    if (d[i * 4 + 3] <= 40 || zone[i] >= 0) continue;
+    const n = tailles.length, pile = [i];
+    zone[i] = n; let t = 0;
+    while (pile.length) {
+      const k = pile.pop(); t++;
+      const x = k % l, y = (k - x) / l;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const X = x + dx, Y = y + dy, K = Y * l + X;
+        if (X >= 0 && Y >= 0 && X < l && Y < hh && zone[K] < 0 && d[K * 4 + 3] > 40) { zone[K] = n; pile.push(K); }
+      }
+    }
+    tailles.push(t);
+  }
+  if (tailles.length <= 1) return pngDetoure;
+  const max = Math.max(...tailles);
+  const garder = tailles.map(t => t >= max * 0.15);
+  if (garder.every(Boolean)) return pngDetoure;
+  // Masque basse définition des zones gardées (légèrement élargi), appliqué à l'image pleine définition.
+  for (let i = 0; i < l * hh; i++) {
+    const ok = zone[i] >= 0 && garder[zone[i]];
+    d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = 255;
+    d[i * 4 + 3] = ok ? 255 : 0;
+  }
+  pctx.putImageData(img, 0, 0);
+  const masque = document.createElement('canvas');
+  masque.width = l; masque.height = hh;
+  const mctx = masque.getContext('2d');
+  mctx.filter = 'blur(1px)';
+  mctx.drawImage(petit, 0, 0);
+  for (let k = 0; k < 2; k++) mctx.drawImage(masque, 0, 0); // renforce le masque sur les bords
+  const c = document.createElement('canvas');
+  c.width = bmp.width; c.height = bmp.height;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(bmp, 0, 0);
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(masque, 0, 0, bmp.width, bmp.height);
+  return new Promise((ok, ko) => c.toBlob(b => (b ? ok(b) : ko(new Error('Nettoyage impossible'))), 'image/png'));
+}
+
+// Inclinaison du vêtement (en degrés) : angle qui rend minimale l'aire du rectangle englobant le contour.
+// Le vêtement n'est que tourné, jamais déformé. Renvoie 0 si l'inclinaison est négligeable ou douteuse.
+export async function angleRedressement(pngDetoure) {
+  const bmp = await createImageBitmap(pngDetoure);
+  const r = Math.min(1, 240 / Math.max(bmp.width, bmp.height));
+  const l = Math.max(1, Math.round(bmp.width * r)), hh = Math.max(1, Math.round(bmp.height * r));
+  const c = document.createElement('canvas');
+  c.width = l; c.height = hh;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(bmp, 0, 0, l, hh);
+  const d = ctx.getImageData(0, 0, l, hh).data;
+  // 1) Ne garder que la plus grande zone d'un seul tenant (le vêtement), pas les miettes de fond.
+  const masque = new Uint8Array(l * hh);
+  for (let i = 0; i < masque.length; i++) masque[i] = d[i * 4 + 3] > 128 ? 1 : 0;
+  const zone = new Int32Array(l * hh).fill(-1);
+  let meilleureZone = -1, tailleMax = 0;
+  for (let i = 0, n = 0; i < masque.length; i++) {
+    if (!masque[i] || zone[i] >= 0) continue;
+    const pile = [i]; zone[i] = n; let taille = 0;
+    while (pile.length) {
+      const k = pile.pop(); taille++;
+      const x = k % l, y = (k - x) / l;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const X = x + dx, Y = y + dy, K = Y * l + X;
+        if (X >= 0 && Y >= 0 && X < l && Y < hh && masque[K] && zone[K] < 0) { zone[K] = n; pile.push(K); }
+      }
+    }
+    if (taille > tailleMax) { tailleMax = taille; meilleureZone = n; }
+    n++;
+  }
+  // 2) Un vêtement à plat (face ou dos) est symétrique gauche-droite : on cherche l'angle
+  //    qui rend la silhouette la plus symétrique autour de son axe vertical.
+  let sx = 0, sy = 0, total = 0;
+  for (let i = 0; i < zone.length; i++) if (zone[i] === meilleureZone) { sx += i % l; sy += Math.floor(i / l); total++; }
+  if (total < 200) return 0;
+  const cx = sx / total, cy = sy / total;
+  const dedans = (x, y) => {
+    const X = Math.round(x), Y = Math.round(y);
+    return X >= 0 && Y >= 0 && X < l && Y < hh && zone[Y * l + X] === meilleureZone;
+  };
+  const symetrie = deg => {
+    const a = (deg * Math.PI) / 180, co = Math.cos(a), si = Math.sin(a);
+    let communs = 0, n = 0;
+    for (let y = 0; y < hh; y += 2) {
+      for (let x = 0; x < l; x += 2) {
+        // Point de l'image redressée (x, y) → point source, et son symétrique par rapport à l'axe vertical.
+        const dx = x - cx, dy = y - cy;
+        const ici = dedans(cx + dx * co + dy * si, cy - dx * si + dy * co);
+        if (!ici) continue;
+        n++;
+        if (dedans(cx - dx * co + dy * si, cy + dx * si + dy * co)) communs++;
+      }
+    }
+    return n ? communs / n : 0;
+  };
+  const base = symetrie(0);
+  let meilleur = 0, max = base;
+  for (let deg = -20; deg <= 20; deg += 0.5) {
+    const sc = symetrie(deg);
+    if (sc > max + 1e-6) { max = sc; meilleur = deg; }
+  }
+  // On ne redresse que si le gain de symétrie est net (sinon : vêtement déjà droit ou forme non symétrique).
+  return Math.abs(meilleur) >= 1 && max - base > 0.03 ? meilleur : 0;
+}
+
+// Vêtement foncé → fond clair ; clair → fond foncé ; jamais un fond trop proche.
+export function choisirFond(L) {
+  const preferences = L < 100 ? ['studio', 'blanc'] : L > 170 ? ['anthracite', 'noir'] : ['studio', 'anthracite'];
+  const ok = preferences.find(f => Math.abs(FONDS[f].L - L) >= SEUIL_CONTRASTE);
+  if (ok) return ok;
+  return Object.keys(FONDS).sort((a, b) => Math.abs(FONDS[b].L - L) - Math.abs(FONDS[a].L - L))[0];
+}
+
+// Détoure les photos qui doivent l'être, puis choisit le fond de l'annonce (d'après la 1re photo détourée).
+export async function preparerPhotos(annonce, { onEtape = () => {}, sauver = async () => {}, fondDefaut = 'auto' } = {}) {
+  const aFaire = annonce.photos.filter(p => doitDetourer(p) && !p.detoure);
+  for (const [i, p] of aFaire.entries()) {
+    onEtape(`Détourage de la photo ${annonce.photos.indexOf(p) + 1} (${i + 1}/${aFaire.length})…`);
+    p.detoure = await detourer(p.blob, (cle, actuel, total) => {
+      if (cle.startsWith('fetch:') && total > 1e6) {
+        onEtape(`Téléchargement de l'outil de détourage (une seule fois) : ${Math.round(actuel / 1e6)} / ${Math.round(total / 1e6)} Mo…`);
+      }
+    });
+    p.detoure = await nettoyer(p.detoure);
+    p.nettoye = true;
+    p.lum = await luminance(p.detoure);
+    await sauver();
+  }
+  for (const p of annonce.photos) {
+    if (doitDetourer(p) && p.detoure && !p.nettoye) {
+      p.detoure = await nettoyer(p.detoure);
+      p.nettoye = true;
+      p.angle = undefined;
+    }
+    if (doitDetourer(p) && p.detoure && p.angle === undefined) {
+      p.angle = p.type === 'profil' ? 0 : await angleRedressement(p.detoure); // chaussure de profil : pas symétrique
+      await sauver();
+    }
+  }
+  const ref = annonce.photos.find(p => doitDetourer(p) && p.detoure);
+  if (ref && ref.lum === undefined) ref.lum = await luminance(ref.detoure);
+  if (!annonce.fond || annonce.fondAuto !== false) {
+    annonce.fond = fondDefaut !== 'auto' && FONDS[fondDefaut] ? fondDefaut : choisirFond(ref?.lum ?? 128);
+    annonce.fondAuto = true;
+  }
+  annonce.fondPropose = ref ? choisirFond(ref.lum) : 'blanc';
+  await sauver();
+}
+
+function canvas(l, h) {
+  const c = document.createElement('canvas');
+  c.width = l; c.height = h;
+  return c;
+}
+
+// Applique rotation (multiple de 90°) et luminosité à une image ; renvoie un canvas.
+async function preparerSource(blob, rotation = 0, luminosite = 1, angleFin = 0) {
+  const bmp = await createImageBitmap(blob);
+  const a = ((rotation + angleFin) * Math.PI) / 180;
+  const co = Math.abs(Math.cos(a)), si = Math.abs(Math.sin(a));
+  const c = canvas(Math.round(bmp.width * co + bmp.height * si), Math.round(bmp.width * si + bmp.height * co));
+  const ctx = c.getContext('2d');
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate(a);
+  ctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+  if (luminosite !== 1) {
+    const img = ctx.getImageData(0, 0, c.width, c.height);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = Math.min(255, d[i] * luminosite);
+      d[i + 1] = Math.min(255, d[i + 1] * luminosite);
+      d[i + 2] = Math.min(255, d[i + 2] * luminosite);
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.putImageData(img, 0, 0);
+  }
+  return c;
+}
+
+// Rectangle englobant le vêtement (pixels non transparents).
+function cadre(c) {
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y += 2) {
+    for (let x = 0; x < c.width; x += 2) {
+      if (d[(y * c.width + x) * 4 + 3] > 20) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  return x1 < 0 ? { x: 0, y: 0, l: c.width, h: c.height } : { x: x0, y: y0, l: x1 - x0 + 2, h: y1 - y0 + 2 };
+}
+
+const NOMS_FOND = { studio: 'blanc cassé très légèrement grisé (style studio photo)', blanc: 'blanc', 'gris-clair': 'gris clair', anthracite: 'gris anthracite', noir: 'noir' };
+
+function blobEnBase64(blob) {
+  return new Promise((ok, ko) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1]);
+    r.onerror = () => ko(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+// Version « repassée » par l'IA (édition d'image Gemini), à partir de la photo détourée sur le fond choisi.
+export async function versionRepassee(p, fond, reglages) {
+  if (!reglages.apiKey) throw new Error('Il faut une clé Gemini (Réglages) pour la version repassée.');
+  let modele = reglages.modeleImage;
+  if (!modele) {
+    modele = (await modelesImage(reglages.apiKey))[0];
+    if (!modele) throw new Error('Aucun modèle d\'édition d\'image disponible avec ta clé Gemini.');
+  }
+  const entree = await rendre({ ...p, rotation: p.rotation, luminosite: p.luminosite }, fond, 0.9);
+  let brut;
+  try {
+    brut = await repasser({ cle: reglages.apiKey, modele, base64: await blobEnBase64(entree), couleurFond: NOMS_FOND[fond] || 'blanc' });
+  } catch (e) {
+    if (e.status === 429) {
+      throw new Error(`quota Google atteint pour ${modele}. L'édition d'image n'est probablement pas incluse dans l'offre gratuite : active la facturation sur ta clé dans Google AI Studio, puis réessaie.`);
+    }
+    throw e;
+  }
+  // Mise au format de l'annonce (portrait 1200×1600) sur le même fond.
+  const bmp = await createImageBitmap(brut);
+  const c = canvas(SORTIE.largeur, SORTIE.hauteur);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = FONDS[fond]?.couleur || '#ffffff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  const e = Math.min(c.width / bmp.width, c.height / bmp.height);
+  ctx.drawImage(bmp, (c.width - bmp.width * e) / 2, (c.height - bmp.height * e) / 2, bmp.width * e, bmp.height * e);
+  const blob = await new Promise((ok, ko) => c.toBlob(b => (b ? ok(b) : ko(new Error('Export impossible'))), 'image/jpeg', 0.9));
+  return { blob, modele };
+}
+
+// Photos à mettre dans l'annonce, dans l'ordre : version IA (si choisie) puis photo réelle (si choisie).
+export function photosAnnonce(annonce, rendus) {
+  const out = [];
+  for (const p of annonce.photos) {
+    const choix = p.repasse && lireReglages().iaImage ? (p.versionIA || 'les-deux') : 'reelle';
+    if (p.repasse && choix !== 'reelle') out.push(p.repasse);
+    if (choix !== 'ia' && rendus.get(p.id)) out.push(rendus.get(p.id));
+  }
+  return out;
+}
+
+export const utiliseIA = annonce => !!annonce.retoucheGemini || (!!lireReglages().iaImage && annonce.photos.some(p => p.repasse && (p.versionIA || 'les-deux') !== 'reelle'));
+
+// Produit la photo finale (JPEG) d'une photo de l'annonce.
+export async function rendre(p, fond, qualite = 0.9) {
+  const rotation = p.rotation || 0;
+  const luminosite = p.luminosite || 1;
+  let sortie;
+  if (doitDetourer(p) && p.detoure) {
+    const angle = lireReglages().redressementAuto !== false ? (p.angle || 0) : 0;
+    const src = await preparerSource(p.detoure, rotation, luminosite, angle);
+    const b = cadre(src);
+    sortie = canvas(SORTIE.largeur, SORTIE.hauteur);
+    const ctx = sortie.getContext('2d');
+    ctx.fillStyle = FONDS[fond]?.couleur || '#ffffff';
+    ctx.fillRect(0, 0, sortie.width, sortie.height);
+    const echelle = Math.min((sortie.width * 0.84) / b.l, (sortie.height * 0.86) / b.h);
+    const l = b.l * echelle, h = b.h * echelle;
+    // Ombre portée douce sous le vêtement, pour éviter l'effet « collage ».
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
+    ctx.shadowBlur = 36;
+    ctx.shadowOffsetY = 14;
+    ctx.drawImage(src, b.x, b.y, b.l, b.h, (sortie.width - l) / 2, (sortie.height - h) / 2, l, h);
+  } else {
+    const src = await preparerSource(p.blob, rotation, luminosite);
+    const r = Math.min(1, 1600 / Math.max(src.width, src.height));
+    sortie = canvas(Math.round(src.width * r), Math.round(src.height * r));
+    sortie.getContext('2d').drawImage(src, 0, 0, sortie.width, sortie.height);
+  }
+  return new Promise((ok, ko) => sortie.toBlob(b => (b ? ok(b) : ko(new Error('Export impossible'))), 'image/jpeg', qualite));
+}
+
+// Enregistre les photos : partage natif (iPhone → « Enregistrer N images ») sinon téléchargements.
+export async function enregistrer(blobs, nomBase = 'annonce') {
+  const slug = nomBase.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'annonce';
+  const fichiers = blobs.map((b, i) => new File([b], `${slug}-${i + 1}.jpg`, { type: 'image/jpeg' }));
+  if (navigator.canShare?.({ files: fichiers })) {
+    try {
+      await navigator.share({ files: fichiers });
+      return 'partage';
+    } catch (e) {
+      if (e.name === 'AbortError') return 'annule';
+      console.warn('Partage impossible, téléchargement à la place', e);
+    }
+  }
+  for (const f of fichiers) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(f);
+    a.download = f.name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return 'telechargement';
+}
+
+// Repasse avec l'IA toutes les photos détourées qui n'ont pas encore de version IA (ou faite sur un autre fond).
+// Ne s'arrête pas sur une erreur : renvoie la liste des échecs.
+export async function repasserTout(annonce, reglages, { onEtape = () => {}, sauver = async () => {} } = {}) {
+  const aFaire = annonce.photos.filter(p => doitDetourer(p) && p.detoure && (!p.repasse || p.repasseFond !== annonce.fond));
+  const echecs = [];
+  for (const [i, p] of aFaire.entries()) {
+    onEtape(`Repassage par l'IA de la photo ${annonce.photos.indexOf(p) + 1} (${i + 1}/${aFaire.length})…`);
+    try {
+      p.repasse = (await versionRepassee(p, annonce.fond, reglages)).blob;
+      p.repasseFond = annonce.fond;
+      p.versionIA = p.versionIA || 'les-deux';
+      await sauver();
+    } catch (e) {
+      echecs.push(`photo ${annonce.photos.indexOf(p) + 1} : ${e.message}`);
+    }
+  }
+  return echecs;
+}
