@@ -8,7 +8,7 @@ import { ecranRetouche } from './screens/retouche.js';
 import { ecranLot } from './screens/lot.js';
 import { icone } from './icones.js';
 
-export const VERSION_APP = '1.0.0';
+export const VERSION_APP = '1.1.0';
 
 const ROUTES = {
   '': { titre: '', ecran: ecranAccueil, retour: null, reglages: true },
@@ -17,7 +17,7 @@ const ROUTES = {
   retouche: { titre: 'Retouche', ecran: ecranRetouche, retour: 'analyse' },
   lot: { titre: 'Plusieurs articles', ecran: ecranLot, retour: '' },
   reglages: { titre: '', ecran: ecranReglages, retour: '' },
-  historique: { titre: 'Historique', ecran: ecranHistorique, retour: '' }
+  historique: { titre: '', ecran: ecranHistorique, retour: '' }
 };
 
 export function aller(route) {

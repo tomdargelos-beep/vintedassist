@@ -1,6 +1,6 @@
 import { h, estIOS, estInstallee } from '../ui.js';
 import { icone } from '../icones.js';
-import { listerAnnonces, nouvelleAnnonce, ouvrirAnnonce } from '../state.js';
+import { listerAnnonces, nouvelleAnnonce, ouvrirAnnonce, statutDe } from '../state.js';
 import { aller } from '../app.js';
 
 function statut(a) {
@@ -23,9 +23,17 @@ export async function ecranAccueil(app) {
       icone('plus', 26), h('div', {}, h('strong', {}, 'Un article'), h('span', { class: 'muted' }, 'Photos triées à la main')))
   ));
 
-  const annonces = (await listerAnnonces()).filter(a => a.photos.length || a.analyse);
+  const toutes = await listerAnnonces();
+  const annonces = toutes.filter(a => (a.photos.length || a.analyse) && statutDe(a) === 'en_cours');
+  const enVente = toutes.filter(a => statutDe(a) === 'publiee').length;
+  const vendues = toutes.filter(a => statutDe(a) === 'vendue').length;
+  const lienHistorique = h('div', { class: 'section', style: 'margin-top:22px' },
+    h('div', { class: 'annonce-item', role: 'button', onclick: () => aller('historique') },
+      h('div', { class: 'ligne-corps' }, h('div', { class: 'titre' }, 'Historique'),
+        h('div', { class: 'muted petit' }, `${enVente} en vente · ${vendues} vendue${vendues > 1 ? 's' : ''}`)),
+      h('span', { class: 'muted' }, icone('suite', 18))));
   if (!annonces.length) {
-    app.append(h('p', { class: 'empty' }, 'Aucune annonce en cours.'));
+    app.append(h('p', { class: 'empty' }, 'Aucune annonce en cours.'), lienHistorique);
     return;
   }
   app.append(h('h2', {}, `En cours · ${annonces.length}`));
@@ -44,5 +52,5 @@ export async function ecranAccueil(app) {
       h('span', { class: 'muted' }, icone('suite', 18))
     ));
   }
-  app.append(liste);
+  app.append(liste, lienHistorique);
 }

@@ -1,6 +1,7 @@
 // Annonces en cours (brouillons), sauvegardées en continu dans IndexedDB pour ne rien perdre
 // si iOS ferme l'appli en arrière-plan. Plusieurs annonces peuvent être en cours en même temps.
 import { dbGet, dbGetAll, dbPut, dbDelete } from './db.js';
+import { redimensionner } from './images.js';
 
 export const TYPES_PHOTO = [
   { id: 'face', label: 'Face' },
@@ -107,6 +108,39 @@ export async function creerAnnonce(photos) {
 export async function supprimerAnnonce(id) {
   if (courante?.id === id) { liberer(courante); courante = null; }
   await dbDelete(STORE, id).catch(() => {});
+}
+
+// Statut d'une annonce : en cours (par défaut) → publiée → vendue.
+export const statutDe = a => a.statut || 'en_cours';
+
+export async function marquerPubliee(a) {
+  a.statut = 'publiee';
+  a.publieeLe = Date.now();
+  await sauverAnnonce(a);
+}
+
+// Vendue : on garde le prix de vente et, pour libérer de la place, seulement la couverture réduite.
+export async function marquerVendue(a, prixVente) {
+  a.statut = 'vendue';
+  a.vendueLe = Date.now();
+  a.prixVente = Number(prixVente) || 0;
+  if (a.photos.length) {
+    const couverture = a.photos[0];
+    try { couverture.blob = await redimensionner(couverture.blob, 600, 0.8); } catch { /* on garde l'original */ }
+    for (const p of a.photos.slice(1)) for (const [k, v] of Object.entries(p)) if (k.startsWith('url') && v) URL.revokeObjectURL(v);
+    for (const k of Object.keys(couverture)) if (!['id', 'blob', 'type', 'url'].includes(k)) delete couverture[k];
+    if (couverture.url) URL.revokeObjectURL(couverture.url);
+    couverture.url = URL.createObjectURL(couverture.blob);
+    a.photos = [couverture];
+  }
+  await sauverAnnonce(a);
+}
+
+export async function remettreEnVente(a) {
+  a.statut = 'publiee';
+  delete a.vendueLe;
+  delete a.prixVente;
+  await sauverAnnonce(a);
 }
 
 export function typeParDefaut(index) {

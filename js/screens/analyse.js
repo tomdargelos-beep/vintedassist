@@ -1,5 +1,6 @@
 import { h, toast } from '../ui.js';
-import { chargerAnnonce, sauverAnnonce, supprimerAnnonce } from '../state.js';
+import { chargerAnnonce, sauverAnnonce, supprimerAnnonce, statutDe, marquerPubliee, marquerVendue, remettreEnVente } from '../state.js';
+import { marge } from './historique.js';
 import { icone } from '../icones.js';
 import { lireReglages } from '../settings.js';
 import { analyserAnnonce } from '../ai/provider.js';
@@ -225,6 +226,39 @@ function relecture(app, annonce, reglages) {
       h('label', { class: 'interrupteur', style: 'display:flex;align-items:center;gap:12px;margin-top:10px' }, h('span', { style: 'flex:1;font-size:15px' }, 'Mention « photos retouchées » dans la description'), mention));
   }
 
+  // Statut : en cours → publiée → vendue (avec le prix réellement encaissé).
+  function blocStatut() {
+    const st = statutDe(annonce);
+    const date = t => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    if (st === 'en_cours') {
+      return h('div', { class: 'card' },
+        h('p', { class: 'muted petit' }, 'Une fois l\'annonce en ligne sur Vinted, range-la dans l\'historique.'),
+        h('button', { class: 'btn', onclick: async () => { await marquerPubliee(annonce); toast('Annonce publiée'); aller(''); } },
+          icone('ok', 18), 'Marquer comme publiée'));
+    }
+    if (st === 'publiee') {
+      const prixVente = h('input', { type: 'number', inputMode: 'decimal', value: affiche || '', placeholder: 'Prix de vente', 'aria-label': 'Prix de vente' });
+      return h('div', { class: 'card' },
+        h('p', { class: 'muted petit' }, `En vente depuis le ${date(annonce.publieeLe)}. Une fois vendue, indique le prix réellement encaissé.`),
+        h('div', { class: 'statut-prix' }, prixVente,
+          h('button', { class: 'btn', style: 'width:auto;margin:0', onclick: async () => {
+            if (!(Number(prixVente.value) > 0)) { toast('Indique le prix de vente'); return; }
+            await marquerVendue(annonce, prixVente.value);
+            toast('Vente enregistrée');
+            aller('historique');
+          } }, icone('ok', 18), 'Vendue')),
+        h('p', { class: 'muted petit' }, 'Seule la photo de couverture, réduite, est gardée après la vente.'),
+        h('button', { class: 'btn btn-lien', onclick: async () => {
+          annonce.statut = 'en_cours'; delete annonce.publieeLe; await sauverAnnonce(); aller('');
+        } }, 'Remettre en cours'));
+    }
+    const m = marge(annonce);
+    return h('div', { class: 'card' },
+      h('p', {}, h('strong', {}, `Vendue ${annonce.prixVente} €`), ` le ${date(annonce.vendueLe)}`),
+      m !== null ? h('p', { class: 'petit ' + (m < 0 ? 'alerte-texte' : 'muted') }, `Marge brute : ${m >= 0 ? '+' : ''}${m.toFixed(2)} €`) : null,
+      h('button', { class: 'btn btn-lien', onclick: async () => { await remettreEnVente(annonce); aller('historique'); } }, 'Annuler la vente'));
+  }
+
   const urls = annonce.photos.map(ph => ph.url).filter(Boolean);
   app.append(
     urls.length ? h('div', { class: 'bande' }, urls.map(u => h('img', { src: u, alt: '' }))) : null,
@@ -252,6 +286,8 @@ function relecture(app, annonce, reglages) {
     h('div', { class: 'section' }, lignesDefauts),
     h('h2', {}, 'Photos'),
     blocPhotos(),
+    h('h2', {}, 'Statut'),
+    blocStatut(),
     h('div', { class: 'liens-bas' },
       h('button', { onclick: () => aller('retouche') }, 'Détourer dans l\'appli'),
       h('button', { onclick: () => aller('photos') }, 'Modifier les photos'),

@@ -131,7 +131,7 @@ Minimaliste, inspirée d'iOS : fond #f6f6f4, blocs blancs arrondis sans bordure,
 4. **Retouche** : aperçu de chaque photo avec le fond choisi, changement de fond.
 5. **Export** : copier les textes, télécharger les photos.
 6. **Réglages** : clé API, fond par défaut, gestion des textures, marge de négociation (%), écart du prix plancher (%).
-7. **Historique** (simple) : les annonces précédentes sont sauvegardées localement (IndexedDB) pour les retrouver.
+7. **Historique** (fait le 18/11/2026) : statut par annonce (en cours → publiée → vendue avec prix encaissé). L'accueil ne montre que les annonces en cours ; l'écran Historique a deux onglets (En vente / Vendues) et un résumé du mois (ventes, encaissé, marge si prix d'achat saisi). Une annonce vendue ne garde que sa couverture réduite (600 px) pour économiser la place.
 
 ## Étapes de développement (dans cet ordre, une à la fois)
 1. Squelette de la PWA + déploiement sur GitHub Pages + test d'installation sur mon téléphone.

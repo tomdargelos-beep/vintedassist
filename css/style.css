@@ -257,3 +257,18 @@ input.switch:checked { background: var(--vert); }
 input.switch:checked::before { transform: translateX(20px); }
 .interrupteur { cursor: pointer; font-size: 15px; color: var(--text); margin: 0; }
 .ligne.interrupteur .ligne-corps { font-size: 16px; }
+
+/* Historique */
+.segments { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--surface-2); border-radius: 12px; }
+.segments button {
+  border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600;
+  padding: 9px 0; border-radius: 9px; cursor: pointer;
+}
+.segments button.actif { background: var(--surface); color: var(--text); box-shadow: var(--ombre); }
+.resume { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.resume strong { font-size: 20px; letter-spacing: -0.02em; }
+.statut-prix { display: flex; gap: 10px; align-items: center; }
+.statut-prix input { flex: 1; }
+/* Notification en bas, au-dessus des boutons fixes */
+#toast { top: auto; bottom: calc(env(safe-area-inset-bottom) + 96px); transform: translateX(-50%) translateY(8px); }
+#toast.visible { transform: translateX(-50%) translateY(0); }
