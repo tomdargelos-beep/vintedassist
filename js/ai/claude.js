@@ -5,9 +5,16 @@ import { promptAnalyse, promptMarche, promptGroupement } from './prompt.js';
 import { nettoyerCle } from '../settings.js';
 
 export const MODELE = 'claude-opus-5-5';
+// Modèles proposés dans les Réglages (du moins cher au plus précis). Coût estimé par annonce sans recherche de prix.
+export const MODELES = [
+  { id: 'claude-haiku-5-5', nom: 'Haiku 5.5 — économique (< 1 centime)', effort: 'medium' },
+  { id: 'claude-sonnet-5-5', nom: 'Sonnet 5.5 — équilibré (~3-4 centimes)', effort: 'medium' },
+  { id: 'claude-opus-5-5', nom: 'Opus 5.5 — le plus précis (~10 centimes)', effort: 'high' }
+];
+const infos = id => MODELES.find(m => m.id === id) || MODELES[0];
 const SCHEMA = enJsonSchema(SCHEMA_ANALYSE);
-// Repli automatique côté serveur si le modèle refuse une requête (rare ici).
-const REPLI = { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' };
+// Repli automatique côté serveur si le modèle refuse une requête (rare ici). Pas disponible sur Haiku.
+const repli = id => (id === 'claude-haiku-5-5' ? {} : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
 
 function client(cle) {
   return new Anthropic({ apiKey: nettoyerCle(cle), dangerouslyAllowBrowser: true, maxRetries: 2, timeout: 180000 });
@@ -33,7 +40,8 @@ function verifierFin(rep) {
 
 const texte = rep => rep.content.filter(b => b.type === 'text').map(b => b.text).join('');
 
-export async function analyserPhotos({ cle, photos, images }) {
+export async function analyserPhotos({ cle, modeleClaude, photos, images }) {
+  const m = infos(modeleClaude);
   const content = [{ type: 'text', text: promptAnalyse(photos) }];
   images.forEach((img, i) => {
     content.push({ type: 'text', text: `Photo ${i + 1} :` });
@@ -42,10 +50,10 @@ export async function analyserPhotos({ cle, photos, images }) {
   let rep;
   try {
     rep = await client(cle).beta.messages.create({
-      model: MODELE,
+      model: m.id,
       max_tokens: 16000,
-      ...REPLI,
-      output_config: { effort: 'high', format: { type: 'json_schema', schema: SCHEMA } },
+      ...repli(m.id),
+      output_config: { effort: m.effort, format: { type: 'json_schema', schema: SCHEMA } },
       messages: [{ role: 'user', content }]
     });
   } catch (e) {
@@ -62,11 +70,13 @@ function extraireJSON(t) {
   return JSON.parse(t.slice(debut, fin + 1));
 }
 
-export async function rechercherMarche({ cle, resume }) {
+export async function rechercherMarche({ cle, modeleClaude, resume }) {
+  const m = infos(modeleClaude);
   const c = client(cle);
   const messages = [{ role: 'user', content: promptMarche(resume) }];
   const outils = [{
-    type: 'web_search_20260209', name: 'web_search', max_uses: 4,
+    // La variante récente (filtrage dynamique) n'existe pas sur Haiku : variante de base pour lui.
+    type: m.id === 'claude-haiku-5-5' ? 'web_search_20250305' : 'web_search_20260209', name: 'web_search', max_uses: 4,
     user_location: { type: 'approximate', country: 'FR' },
     blocked_domains: ['vinted.fr', 'vinted.com']
   }];
@@ -75,7 +85,7 @@ export async function rechercherMarche({ cle, resume }) {
     // La recherche web peut faire une pause (« pause_turn ») : on relance pour la laisser finir.
     for (let i = 0; i < 3; i++) {
       rep = await c.beta.messages.create({
-        model: MODELE, max_tokens: 16000, ...REPLI,
+        model: m.id, max_tokens: 16000, ...repli(m.id),
         output_config: { effort: 'medium' }, tools: outils, messages
       });
       if (rep.stop_reason !== 'pause_turn') break;
@@ -104,7 +114,8 @@ export async function listerModeles(cle) {
   }
 }
 
-export async function grouperPhotos({ cle, images }) {
+export async function grouperPhotos({ cle, modeleClaude, images }) {
+  const m = infos(modeleClaude);
   const content = [{ type: 'text', text: promptGroupement(images.length) }];
   images.forEach((img, i) => {
     content.push({ type: 'text', text: `Photo ${i + 1} :` });
@@ -113,7 +124,7 @@ export async function grouperPhotos({ cle, images }) {
   let rep;
   try {
     rep = await client(cle).beta.messages.create({
-      model: MODELE, max_tokens: 16000, ...REPLI,
+      model: m.id, max_tokens: 16000, ...repli(m.id),
       output_config: { effort: 'medium', format: { type: 'json_schema', schema: enJsonSchema(SCHEMA_GROUPEMENT) } },
       messages: [{ role: 'user', content }]
     });

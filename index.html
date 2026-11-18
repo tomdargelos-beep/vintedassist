@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Vinted Assist</title>
   <meta name="description" content="Assistant personnel de création d'annonces Vinted">
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#f6f6f4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
   <link rel="manifest" href="manifest.webmanifest">
   <!-- iOS : réglages pour l'appli installée sur l'écran d'accueil -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,9 +19,9 @@
 </head>
 <body>
   <header class="topbar">
-    <button id="btn-retour" class="topbar-btn" hidden aria-label="Retour">&larr; Retour</button>
-    <h1 id="titre">Vinted Assist</h1>
-    <span class="topbar-btn"></span>
+    <button id="btn-retour" class="topbar-btn" hidden aria-label="Retour"></button>
+    <h1 id="titre"></h1>
+    <button id="btn-droite" class="topbar-btn" hidden aria-label="Réglages"></button>
   </header>
   <main id="app"></main>
   <div id="toast" role="status" aria-live="polite"></div>

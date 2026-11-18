@@ -5,7 +5,7 @@ import * as claude from './claude.js';
 import { redimensionner } from '../images.js';
 
 const FOURNISSEURS = { claude, gemini };
-export const NOMS = { claude: 'Claude Opus 5.5', gemini: 'Gemini (gratuit)' };
+export const NOMS = { claude: 'Claude', gemini: 'Gemini (gratuit)' };
 
 function blobEnBase64(blob) {
   return new Promise((resolve, reject) => {
@@ -33,7 +33,7 @@ async function avecSecours(r, onEtape, fn) {
   const echecs = [];
   for (const [i, nom] of ordre.entries()) {
     try {
-      return { nom, res: await fn(FOURNISSEURS[nom], { cle: cleDe(nom, r), modele: r.modele }) };
+      return { nom, res: await fn(FOURNISSEURS[nom], { cle: cleDe(nom, r), modele: r.modele, modeleClaude: r.modeleClaude }) };
     } catch (e) {
       echecs.push(`${NOMS[nom]} : ${e.message}`);
       const fin = e.status === undefined || i === ordre.length - 1;
@@ -57,6 +57,13 @@ export async function analyserAnnonce(photos, reglages, onEtape = () => {}) {
   onEtape('Analyse des photos par l\'IA…');
   const { nom, res: analyse } = await avecSecours(reglages, onEtape,
     (f, base) => f.analyserPhotos({ ...base, photos, images, onEtape }));
+
+  // Sans recherche de prix (réglage par défaut, moins cher) : le prix visé est une estimation indicative de l'IA.
+  if (!reglages.recherchePrix) {
+    analyse.prix = { ...analyse.prix, references_marche: [], sansRecherche: true,
+      justification: 'Estimation indicative de l\'IA, sans recherche de prix : fixe ton prix.' };
+    return analyse;
+  }
 
   onEtape('Recherche des prix du marché…');
   let marche = null;

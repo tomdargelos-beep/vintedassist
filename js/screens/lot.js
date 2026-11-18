@@ -8,6 +8,7 @@ import { lireReglages } from '../settings.js';
 import { grouperPhotos, analyserAnnonce } from '../ai/provider.js';
 import { preparerPhotos, repasserTout } from '../retouche.js';
 import { aller } from '../app.js';
+import { icone } from '../icones.js';
 
 const CLE = '__lot';
 let lot = null; // { photos: [{ id, blob, url }], groupes: [{ description, photos: [{ index, type }] }] | null }
@@ -55,7 +56,7 @@ function etapeImport(app) {
   const grille = h('div', { class: 'grille' }, lot.photos.map((p, i) =>
     h('div', { class: 'vignette' }, h('img', { src: p.url, alt: `Photo ${i + 1}` }), h('span', {}, String(i + 1)))));
   const etat = h('p', { class: 'muted' });
-  const btn = h('button', { class: 'btn btn-primary', disabled: lot.photos.length < 2, onclick: async () => {
+  const btn = h('button', { class: 'btn btn-primary', disabled: lot.photos.length < 1, onclick: async () => {
     btn.disabled = true;
     try {
       lot.groupes = await grouperPhotos(lot.photos, lireReglages(), t => { etat.textContent = t; });
@@ -65,19 +66,19 @@ function etapeImport(app) {
       etat.textContent = 'Regroupement impossible : ' + e.message;
       btn.disabled = false;
     }
-  } }, `Regrouper par article avec l'IA (${lot.photos.length} photos)`);
+  } }, lot.photos.length ? `Rédiger les annonces · ${lot.photos.length} photo${lot.photos.length > 1 ? 's' : ''}` : 'Rédiger les annonces');
 
   app.append(
     inputCamera, inputGalerie,
-    h('p', { class: 'muted' }, 'Ajoute toutes les photos de tous les articles. Garde les photos d\'un même article à la suite : ça aide l\'IA.'),
+    h('p', { class: 'muted' }, 'Mets toutes tes photos, d\'un ou plusieurs articles. L\'IA les trie par article. Garde les photos d\'un même article à la suite.'),
     h('div', { class: 'row' },
-      h('button', { class: 'btn', onclick: () => inputCamera.click() }, 'Appareil photo'),
-      h('button', { class: 'btn', onclick: () => inputGalerie.click() }, 'Galerie')),
+      h('button', { class: 'btn', onclick: () => inputCamera.click() }, icone('photo'), 'Prendre'),
+      h('button', { class: 'btn', onclick: () => inputGalerie.click() }, icone('galerie'), 'Importer')),
     lot.photos.length ? grille : h('p', { class: 'empty' }, 'Aucune photo pour l\'instant.'),
     etat,
     h('div', { class: 'sticky-bottom' }, btn),
-    lot.photos.length ? h('button', { class: 'btn btn-danger', onclick: async () => {
-      if (confirm('Vider toutes les photos du lot ?')) { await viderLot(); app._rendu(); }
+    lot.photos.length ? h('button', { class: 'btn btn-lien', onclick: async () => {
+      if (confirm('Vider toutes les photos ?')) { await viderLot(); app._rendu(); }
     } }, 'Tout effacer') : null
   );
 }
@@ -110,11 +111,11 @@ function etapeGroupes(app) {
   });
 
   app.append(
-    h('p', { class: 'muted' }, `L'IA a trouvé ${G.length} article(s). Vérifie les groupes et les types, déplace une photo si besoin.`),
+    h('p', { class: 'muted' }, `${G.length} article${G.length > 1 ? 's' : ''} trouvé${G.length > 1 ? 's' : ''}. Vérifie les groupes, puis lance la rédaction.`),
     ...cartes,
     h('div', { class: 'sticky-bottom' },
-      h('button', { class: 'btn btn-primary', onclick: () => traiter(app) }, `Créer et préparer les ${G.length} annonces`)),
-    h('button', { class: 'btn', onclick: () => { lot.groupes = null; sauverLot(); app._rendu(); } }, 'Revenir aux photos')
+      h('button', { class: 'btn btn-primary', onclick: () => traiter(app) }, G.length > 1 ? `Rédiger les ${G.length} annonces` : 'Rédiger l\'annonce')),
+    h('button', { class: 'btn btn-lien', onclick: () => { lot.groupes = null; sauverLot(); app._rendu(); } }, 'Revenir aux photos')
   );
 }
 
@@ -151,7 +152,7 @@ async function traiter(app) {
         const echecs = await repasserTout(a, reglages, { onEtape: t => { l.etat.textContent = t; }, sauver: () => sauverAnnonce(a) });
         if (echecs.length) note = ` (repassage IA impossible pour ${echecs.length} photo(s))`;
       }
-      l.etat.textContent = `Prête : ${a.analyse.titre}${note}`;
+      l.etat.textContent = `${a.analyse.titre}${note}`;
       ok++;
     } catch (e) {
       console.error(e);
@@ -160,5 +161,5 @@ async function traiter(app) {
     }
   }
   fin.append(h('p', {}, `${ok} annonce(s) prête(s) sur ${annonces.length}.`),
-    h('button', { class: 'btn btn-primary', onclick: () => aller('') }, 'Voir mes annonces'));
+    h('button', { class: 'btn btn-primary', onclick: () => aller('') }, 'Voir les annonces'));
 }

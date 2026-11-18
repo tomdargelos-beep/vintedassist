@@ -4,6 +4,8 @@ const CLE = 'va.reglages';
 export const DEFAUTS = {
   fournisseur: 'claude',  // principal : claude | gemini
   cleClaude: '',
+  modeleClaude: 'claude-haiku-5-5', // économique par défaut (choix de Tom : réduire le coût)
+  recherchePrix: false,              // recherche web des prix : désactivée (coût) ; Tom fixe ses prix
   apiKey: '',              // clé Gemini (secours)
   modele: 'gemini-flash-latest', // alias officiel qui suit le dernier modèle Flash
   modeleImage: '',         // modèle Gemini d'édition d'image (vide = détection automatique)

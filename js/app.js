@@ -6,16 +6,17 @@ import { ecranReglages } from './screens/reglages.js';
 import { ecranHistorique } from './screens/historique.js';
 import { ecranRetouche } from './screens/retouche.js';
 import { ecranLot } from './screens/lot.js';
+import { icone } from './icones.js';
 
-export const VERSION_APP = '0.9.0';
+export const VERSION_APP = '1.0.0';
 
 const ROUTES = {
-  '': { titre: 'Vinted Assist', ecran: ecranAccueil, retour: null },
+  '': { titre: '', ecran: ecranAccueil, retour: null, reglages: true },
   photos: { titre: 'Photos', ecran: ecranPhotos, retour: '' },
   analyse: { titre: 'Annonce', ecran: ecranAnalyse, retour: '' },
   retouche: { titre: 'Retouche', ecran: ecranRetouche, retour: 'analyse' },
-  lot: { titre: 'Plusieurs annonces', ecran: ecranLot, retour: '' },
-  reglages: { titre: 'Réglages', ecran: ecranReglages, retour: '' },
+  lot: { titre: 'Plusieurs articles', ecran: ecranLot, retour: '' },
+  reglages: { titre: '', ecran: ecranReglages, retour: '' },
   historique: { titre: 'Historique', ecran: ecranHistorique, retour: '' }
 };
 
@@ -30,6 +31,11 @@ async function afficher() {
   const retour = document.getElementById('btn-retour');
   retour.hidden = route.retour === null;
   retour.onclick = () => aller(route.retour);
+  if (!retour.firstChild) retour.append(icone('retour', 24));
+  const droite = document.getElementById('btn-droite');
+  if (!droite.firstChild) droite.append(icone('reglages', 22));
+  droite.hidden = !route.reglages;
+  droite.onclick = () => aller('reglages');
   const app = document.getElementById('app');
   app.replaceChildren();
   window.scrollTo(0, 0);

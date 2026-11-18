@@ -24,6 +24,7 @@ Ce que je vends : surtout de l'**homme**, principalement des **hauts** (t-shirts
 
 ## Analyse IA des photos
 - **Fournisseur principal : Claude Opus 5.5** (`claude-opus-5-5`, API Anthropic, crédits prépayés, ~0,10-0,15 € par annonce), choisi le 17/11/2026 car l'offre gratuite Gemini renvoyait des erreurs 503 « surchargé » sur tous les modèles Flash. SDK officiel `@anthropic-ai/sdk` 1.4.0 empaqueté dans `js/vendor/` (appel direct depuis le navigateur, `dangerouslyAllowBrowser`). Analyse en sortie JSON stricte (`output_config.format`, effort `high`), prix via l'outil `web_search_20260209` (Vinted bloqué), repli serveur `fallbacks: "default"`. Bascule automatique sur Gemini si Claude est indisponible et qu'une clé Gemini est saisie.
+- **Mise à jour 18/11/2026 (coût, choix de Tom)** : modèle Claude au choix dans les Réglages (`claude-haiku-5-5` par défaut, < 1 centime/annonce ; `claude-sonnet-5-5` ~3-4 centimes ; `claude-opus-5-5` ~10 centimes). **Recherche de prix désactivée par défaut** (`recherchePrix`) : le prix visé est une estimation indicative de l'IA (non comptée dans les champs à vérifier), Tom fixe ses prix. Pas de `fallbacks` serveur sur Haiku ; recherche web en `web_search_20250305` sur Haiku.
 - Fournisseur de secours : **API Google Gemini** (offre gratuite, modèle « Flash » multimodal). Note : mon abonnement Gemini Pro (appli grand public) ne donne **pas** d'accès à l'API ; la clé API se crée séparément et gratuitement sur Google AI Studio. Vérifie dans la doc officielle le nom du modèle actuel au lieu d'en coder un de mémoire.
 - Modèle : alias `gemini-flash-latest` par défaut (modifiable dans les Réglages, bouton « Tester la clé » qui liste les modèles disponibles). Recherche de prix : 2e appel avec l'outil `google_search`, sortie JSON lue dans le texte (le JSON strict n'est pas combiné à la recherche).
 - Prévois une **couche d'abstraction** (un module `aiProvider`) pour pouvoir passer plus tard à l'API Claude sans tout réécrire.
@@ -119,6 +120,9 @@ Chaque information identifiée est un objet `{valeur, certitude, justification}`
 - J'importe toutes les photos de plusieurs articles ; l'IA les regroupe par article et donne le type de chaque photo (un appel, photos réduites à 512 px).
 - Je valide ou corrige les groupes (déplacer une photo, changer un type, renommer), puis l'appli crée chaque annonce, range les photos dans l'ordre (face, dos, …, étiquettes, défauts), lance l'analyse puis le détourage, l'une après l'autre.
 - Plusieurs annonces peuvent être en cours en même temps (liste sur l'accueil, stockées dans IndexedDB).
+
+## Interface (18/11/2026)
+Minimaliste, inspirée d'iOS : fond #f6f6f4, blocs blancs arrondis sans bordure, un seul bouton noir par écran, icônes au trait (`js/icones.js`), interrupteurs façon iOS, mode sombre automatique, réglages enregistrés automatiquement. Accueil : « Ajouter des photos » (un ou plusieurs articles, tri par l'IA) et « Un article », puis la liste des annonces en cours. Écran annonce : bandeau de photos, Texte, Prix, Détails Vinted (lignes compactes + copier + certitude), Défauts, Photos (Gemini), liens discrets en bas. Tom pourra envoyer un design de référence.
 
 ## Parcours utilisateur (écrans)
 1. **Accueil** : bouton « Nouvelle annonce ».

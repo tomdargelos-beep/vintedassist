@@ -2,6 +2,7 @@ import { h, toast } from '../ui.js';
 import { chargerAnnonce, sauverAnnonce, TYPES_PHOTO, typeParDefaut } from '../state.js';
 import { redimensionner } from '../images.js';
 import { aller } from '../app.js';
+import { icone } from '../icones.js';
 
 export async function ecranPhotos(app) {
   const annonce = await chargerAnnonce();
@@ -12,9 +13,9 @@ export async function ecranPhotos(app) {
   const inputGalerie = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'file-hidden' });
 
   const liste = h('ul', { class: 'photos' });
-  const btnContinuer = h('button', { class: 'btn btn-primary', onclick: () => aller('analyse') }, 'Continuer vers l\'analyse');
+  const btnContinuer = h('button', { class: 'btn btn-primary', onclick: () => aller('analyse') }, 'Rédiger l\'annonce');
   const aide = h('p', { class: 'muted' },
-    'Ordre conseillé : face, dos, étiquette marque, étiquette taille/composition, puis défauts. La photo 1 sera la couverture.');
+    'Ordre conseillé : face, dos, étiquettes, puis défauts. La première photo sert de couverture.');
 
   async function ajouter(fichiers) {
     if (!fichiers.length) return;
@@ -74,9 +75,9 @@ export async function ecranPhotos(app) {
           h('div', { class: 'photo-num' }, `Photo ${i + 1}`, i === 0 ? h('span', { class: 'couverture' }, 'couverture') : null),
           select,
           h('div', { class: 'photo-actions' },
-            h('button', { class: 'icon-btn', 'aria-label': 'Monter', disabled: i === 0, onclick: () => deplacer(i, -1) }, '↑'),
-            h('button', { class: 'icon-btn', 'aria-label': 'Descendre', disabled: i === annonce.photos.length - 1, onclick: () => deplacer(i, 1) }, '↓'),
-            h('button', { class: 'icon-btn suppr', 'aria-label': 'Supprimer', onclick: () => supprimer(i) }, 'Suppr.')
+            h('button', { class: 'icon-btn', 'aria-label': 'Monter', disabled: i === 0, onclick: () => deplacer(i, -1) }, icone('haut', 18)),
+            h('button', { class: 'icon-btn', 'aria-label': 'Descendre', disabled: i === annonce.photos.length - 1, onclick: () => deplacer(i, 1) }, icone('bas', 18)),
+            h('button', { class: 'icon-btn suppr', 'aria-label': 'Supprimer', onclick: () => supprimer(i) }, icone('supprimer', 18))
           )
         )
       ));
@@ -87,8 +88,8 @@ export async function ecranPhotos(app) {
   app.append(
     inputCamera, inputGalerie,
     h('div', { class: 'row' },
-      h('button', { class: 'btn', onclick: () => inputCamera.click() }, 'Appareil photo'),
-      h('button', { class: 'btn', onclick: () => inputGalerie.click() }, 'Galerie')
+      h('button', { class: 'btn', onclick: () => inputCamera.click() }, icone('photo'), 'Prendre'),
+      h('button', { class: 'btn', onclick: () => inputGalerie.click() }, icone('galerie'), 'Importer')
     ),
     aide,
     liste,
